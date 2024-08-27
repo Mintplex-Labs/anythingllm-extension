@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AnythingLLM",
+  "name": "AnythingLLM Browser Companion",
   "version": "1.0.0",
-  "description": "Save selected text to AnythingLLM",
+  "description": "Bring AnythingLLM directly into your browser to curate and collect content on the web directly into your AnythingLLM workspaces.",
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
@@ -16,7 +16,9 @@
     "notifications",
     "alarms"
   ],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -31,8 +33,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["contentScript.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "contentScript.js"
+      ]
     }
   ]
 }

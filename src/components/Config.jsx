@@ -25,7 +25,7 @@ export default function Config({ status, onStatusChange }) {
       const { online } = await BrowserExtension.checkOnline(apiBase);
       if (!online) {
         setSaveStatus(
-          "AnythingLLM is currently offline. Please try again later.",
+          "AnythingLLM is currently offline. Please try again later."
         );
         return;
       }
@@ -57,7 +57,7 @@ export default function Config({ status, onStatusChange }) {
 
       const { success, error } = await BrowserExtension.disconnect(
         apiBase,
-        apiKey,
+        apiKey
       );
       if (!success) {
         throw new Error(error || "Failed to disconnect from the server");
