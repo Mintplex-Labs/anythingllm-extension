@@ -27,6 +27,12 @@
 
 ## Installation
 
+<a href="https://chromewebstore.google.com/detail/anythingllm-browser-compa/pncmdlebcopjodenlllcomedphdmeogm">
+  <img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khYWPJUsQceQkhXSlv1/iNEddTyWiMfLSwFD6qGq.png" alt="Chrome Extension" width="200">
+</a>
+
+_or_
+
 1. Clone this repository or download the latest release.
 2. Open Chrome and navigate to `chrome://extensions`.
 3. Enable "Developer mode" in the top right corner.
