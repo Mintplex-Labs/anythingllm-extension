@@ -45,7 +45,7 @@ export default function Config({ status, onStatusChange }) {
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = async (isOffline = false) => {
     try {
       const { apiBase, apiKey } = await chrome.storage.sync.get([
         "apiBase",
@@ -53,6 +53,13 @@ export default function Config({ status, onStatusChange }) {
       ]);
       if (!apiBase || !apiKey) {
         throw new Error("No connection found");
+      }
+      if (isOffline) {
+        await chrome.storage.sync.remove(["apiBase", "apiKey"]);
+        onStatusChange();
+        setSaveStatus("Successfully disconnected from AnythingLLM");
+        chrome.runtime.sendMessage({ action: "connectionUpdated" });
+        return;
       }
 
       const { success, error } = await BrowserExtension.disconnect(
@@ -106,7 +113,7 @@ export default function Config({ status, onStatusChange }) {
             </p>
           </div>
           <button
-            onClick={handleDisconnect}
+            onClick={() => handleDisconnect(false)}
             className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 border border-red-500 hover:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
           >
             Disconnect
@@ -115,8 +122,16 @@ export default function Config({ status, onStatusChange }) {
       )}
 
       {status === "offline" && (
+        <div className="w-full flex flex-col gap-y-4">
+          <button
+            onClick={() => handleDisconnect(true)}
+                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 border border-red-500 hover:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                >
+                  Disconnect
+                </button>
         <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-2.5 rounded-lg">
           AnythingLLM is currently offline. Please try again later.
+        </div>
         </div>
       )}
 
