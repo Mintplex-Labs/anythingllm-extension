@@ -14,6 +14,14 @@ export default function Config({ status, onStatusChange }) {
     }
   }, [saveStatus]);
 
+  // Disconnects & de-registers the current extension from the set API key.
+  async function disconnectFromExtension() {
+    await chrome.storage.sync.remove(["apiBase", "apiKey"]);
+    onStatusChange();
+    setSaveStatus("Successfully disconnected from AnythingLLM");
+    chrome.runtime.sendMessage({ action: "connectionUpdated" });
+  }
+
   const handleConnect = async () => {
     try {
       const [apiBase, apiKey] = connectionString.split("|");
@@ -31,15 +39,14 @@ export default function Config({ status, onStatusChange }) {
       }
 
       const { response } = await BrowserExtension.checkApiKey(apiBase, apiKey);
+      if (!response.ok)
+        return setSaveStatus("Failed to connect: Invalid API key");
 
-      if (response.ok) {
-        await chrome.storage.sync.set({ apiBase, apiKey });
-        onStatusChange();
-        setSaveStatus("Successfully connected to AnythingLLM");
-        chrome.runtime.sendMessage({ action: "connectionUpdated" });
-      } else {
-        setSaveStatus("Failed to connect: Invalid API key");
-      }
+      // Saves the apiBase and apiKey to storage sync.
+      await chrome.storage.sync.set({ apiBase, apiKey });
+      onStatusChange();
+      setSaveStatus("Successfully connected to AnythingLLM");
+      chrome.runtime.sendMessage({ action: "connectionUpdated" });
     } catch (error) {
       setSaveStatus(`An error occurred during connection: ${error.message}`);
     }
@@ -51,22 +58,14 @@ export default function Config({ status, onStatusChange }) {
         "apiBase",
         "apiKey",
       ]);
-      if (!apiBase || !apiKey) {
-        throw new Error("No connection found");
-      }
-
+      if (!apiBase || !apiKey) throw new Error("No connection found");
       const { success, error } = await BrowserExtension.disconnect(
         apiBase,
         apiKey
       );
-      if (!success) {
+      if (!success)
         throw new Error(error || "Failed to disconnect from the server");
-      }
-
-      await chrome.storage.sync.remove(["apiBase", "apiKey"]);
-      onStatusChange();
-      setSaveStatus("Successfully disconnected from AnythingLLM");
-      chrome.runtime.sendMessage({ action: "connectionUpdated" });
+      await disconnectFromExtension();
     } catch (error) {
       setSaveStatus(`An error occurred during disconnection: ${error.message}`);
     }
@@ -115,8 +114,16 @@ export default function Config({ status, onStatusChange }) {
       )}
 
       {status === "offline" && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-2.5 rounded-lg">
-          AnythingLLM is currently offline. Please try again later.
+        <div className="w-full flex flex-col gap-y-4">
+          <button
+            onClick={disconnectFromExtension}
+            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 border border-red-500 hover:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+          >
+            Disconnect
+          </button>
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-2.5 rounded-lg">
+            AnythingLLM is currently offline. Please try again later.
+          </div>
         </div>
       )}
 
