@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import browser from "webextension-polyfill";
 import BrowserExtension from "../models/browserExtension";
 
 export default function Config({ status, onStatusChange }) {
@@ -16,10 +17,10 @@ export default function Config({ status, onStatusChange }) {
 
   // Disconnects & de-registers the current extension from the set API key.
   async function disconnectFromExtension() {
-    await chrome.storage.sync.remove(["apiBase", "apiKey"]);
+    await browser.storage.sync.remove(["apiBase", "apiKey"]);
     onStatusChange();
     setSaveStatus("Successfully disconnected from AnythingLLM");
-    chrome.runtime.sendMessage({ action: "connectionUpdated" });
+    await browser.runtime.sendMessage({ action: "connectionUpdated" });
   }
 
   const handleConnect = async () => {
@@ -43,10 +44,10 @@ export default function Config({ status, onStatusChange }) {
         return setSaveStatus("Failed to connect: Invalid API key");
 
       // Saves the apiBase and apiKey to storage sync.
-      await chrome.storage.sync.set({ apiBase, apiKey });
+      await browser.storage.sync.set({ apiBase, apiKey });
       onStatusChange();
       setSaveStatus("Successfully connected to AnythingLLM");
-      chrome.runtime.sendMessage({ action: "connectionUpdated" });
+      await browser.runtime.sendMessage({ action: "connectionUpdated" });
     } catch (error) {
       setSaveStatus(`An error occurred during connection: ${error.message}`);
     }
@@ -54,7 +55,7 @@ export default function Config({ status, onStatusChange }) {
 
   const handleDisconnect = async () => {
     try {
-      const { apiBase, apiKey } = await chrome.storage.sync.get([
+      const { apiBase, apiKey } = await browser.storage.sync.get([
         "apiBase",
         "apiKey",
       ]);
