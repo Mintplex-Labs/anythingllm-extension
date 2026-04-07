@@ -3,15 +3,23 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --watch src --watch public -e js,jsx,css,html --exec \"yarn dev:build\"",
-    "dev:build": "vite build && cp public/background.js dist/",
-    "build": "vite build && cp public/background.js dist/",
+    "dev": "vite",
+    "build": "BUILD_TARGET=chrome vite build",
+    "build:chrome": "BUILD_TARGET=chrome vite build",
+    "build:firefox": "BUILD_TARGET=firefox vite build",
+    "build:all": "npm-run-all --parallel build:chrome build:firefox",
+    "run:firefox": "web-ext run --source-dir dist/firefox",
+    "run:chrome": "web-ext run --source-dir dist/chrome -t chromium",
+    "package:firefox": "web-ext build --source-dir dist/firefox --artifacts-dir artifacts/firefox --overwrite-dest",
+    "package:chrome": "web-ext build --source-dir dist/chrome --artifacts-dir artifacts/chrome --overwrite-dest",
     "lint": "yarn prettier --ignore-path ../.prettierignore --write ./src",
+    "lint:firefox": "web-ext lint --source-dir dist/firefox",
     "preview": "vite preview"
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -19,9 +27,12 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "nodemon": "^3.1.4",
+    "npm-run-all": "^4.1.5",
     "postcss": "^8.4.40",
     "prettier": "^3.0.3",
     "tailwindcss": "^3.4.7",
-    "vite": "^5.3.4"
+    "vite": "^5.3.4",
+    "vite-plugin-web-extension": "^4.5.1",
+    "web-ext": "^10.1.0"
   }
 }

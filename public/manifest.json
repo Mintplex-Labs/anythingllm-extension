@@ -20,7 +20,14 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "@anythingllm-extension.Mintplex-Labs",
+      "strict_min_version": "109.0"
+    }
   },
   "action": {
     "default_popup": "index.html",
@@ -37,7 +44,7 @@
         "<all_urls>"
       ],
       "js": [
-        "contentScript.js"
+        "src/contentScript.js"
       ]
     }
   ]
