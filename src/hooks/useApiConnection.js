@@ -5,24 +5,36 @@ import BrowserExtension from "@/models/browserExtension";
 /**
  * Fetches connection information for API key provided
  * @returns {{
- * status: ("loading"|"notConnected"|"offline"|"connected")
+ * status: ("loading"|"notConnected"|"offline"|"connected"),
+ * pendingConnection: {apiBase: string, apiKey: string, requestedBy: string} | null,
  * }}
  */
 export default function useApiConnection() {
   const [status, setStatus] = useState("loading");
   const [logoUrl, setLogoUrl] = useState(AnythingLLMLogo);
+  const [pendingConnection, setPendingConnection] = useState(null);
 
   useEffect(() => {
     checkApiKeyStatus();
     fetchLogo();
+    chrome.storage.session
+      .get(["pendingConnection"])
+      .then(({ pendingConnection }) =>
+        setPendingConnection(pendingConnection || null),
+      );
 
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.action === "newApiKey") {
-        checkApiKeyStatus();
-        fetchLogo();
-      }
-    });
+    const onStorageChanged = (changes, area) => {
+      if (area !== "session" || !changes.pendingConnection) return;
+      setPendingConnection(changes.pendingConnection.newValue || null);
+    };
+    chrome.storage.onChanged.addListener(onStorageChanged);
+    return () => chrome.storage.onChanged.removeListener(onStorageChanged);
   }, []);
+
+  const clearPendingConnection = async () => {
+    await chrome.storage.session.remove(["pendingConnection"]);
+    setPendingConnection(null);
+  };
 
   const checkApiKeyStatus = async () => {
     const { apiBase, apiKey } = await chrome.storage.sync.get([
@@ -62,5 +74,16 @@ export default function useApiConnection() {
     setLogoUrl(success ? logoURL : AnythingLLMLogo);
   };
 
-  return { status, logoUrl, checkApiKeyStatus };
+  const onConnectionChange = () => {
+    checkApiKeyStatus();
+    fetchLogo();
+  };
+
+  return {
+    status,
+    logoUrl,
+    checkApiKeyStatus: onConnectionChange,
+    pendingConnection,
+    clearPendingConnection,
+  };
 }

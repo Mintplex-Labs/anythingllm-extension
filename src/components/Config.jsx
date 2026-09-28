@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import BrowserExtension from "../models/browserExtension";
 
-export default function Config({ status, onStatusChange }) {
+export default function Config({
+  status,
+  onStatusChange,
+  pendingConnection,
+  onPendingConnectionHandled,
+}) {
   const [connectionString, setConnectionString] = useState("");
   const [saveStatus, setSaveStatus] = useState("");
 
@@ -22,7 +27,7 @@ export default function Config({ status, onStatusChange }) {
     chrome.runtime.sendMessage({ action: "connectionUpdated" });
   }
 
-  const handleConnect = async () => {
+  const handleConnect = async (connectionString) => {
     try {
       const [apiBase, apiKey] = connectionString.split("|");
       if (!apiBase || !apiKey) {
@@ -33,7 +38,7 @@ export default function Config({ status, onStatusChange }) {
       const { online } = await BrowserExtension.checkOnline(apiBase);
       if (!online) {
         setSaveStatus(
-          "AnythingLLM is currently offline. Please try again later."
+          "AnythingLLM is currently offline. Please try again later.",
         );
         return;
       }
@@ -52,6 +57,12 @@ export default function Config({ status, onStatusChange }) {
     }
   };
 
+  const approvePendingConnection = async () => {
+    const { apiBase, apiKey } = pendingConnection;
+    await onPendingConnectionHandled();
+    await handleConnect(`${apiBase}|${apiKey}`);
+  };
+
   const handleDisconnect = async () => {
     try {
       const { apiBase, apiKey } = await chrome.storage.sync.get([
@@ -61,7 +72,7 @@ export default function Config({ status, onStatusChange }) {
       if (!apiBase || !apiKey) throw new Error("No connection found");
       const { success, error } = await BrowserExtension.disconnect(
         apiBase,
-        apiKey
+        apiKey,
       );
       if (!success)
         throw new Error(error || "Failed to disconnect from the server");
@@ -70,6 +81,45 @@ export default function Config({ status, onStatusChange }) {
       setSaveStatus(`An error occurred during disconnection: ${error.message}`);
     }
   };
+
+  if (pendingConnection) {
+    return (
+      <div className="w-full flex flex-col gap-y-4">
+        <div className="bg-zinc-900 p-2.5 rounded-lg text-white text-sm flex flex-col gap-y-2">
+          <p>
+            <span className="font-semibold">
+              {pendingConnection.requestedBy}
+            </span>{" "}
+            wants to connect this extension to:
+          </p>
+          <p className="font-mono break-all text-[#46C8FF]">
+            {pendingConnection.apiBase}
+          </p>
+          {status === "connected" && (
+            <p className="text-yellow-400">
+              This will replace your current connection.
+            </p>
+          )}
+          <p className="text-white/60">
+            Only approve if you just requested this from your own AnythingLLM
+            instance.
+          </p>
+        </div>
+        <button
+          onClick={approvePendingConnection}
+          className="bg-[#46C8FF] hover:bg-[#3BA3D0] text-white font-bold py-2 px-4 rounded-lg transition duration-300 border border-[#46C8FF] hover:border-[#3BA3D0] focus:outline-none focus:ring-2 focus:ring-[#46C8FF] focus:ring-opacity-50"
+        >
+          Approve
+        </button>
+        <button
+          onClick={onPendingConnectionHandled}
+          className="bg-transparent hover:bg-white/10 text-white font-bold py-2 px-4 rounded-lg transition duration-300 border border-white/20 focus:outline-none"
+        >
+          Reject
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col gap-y-4">
@@ -88,7 +138,7 @@ export default function Config({ status, onStatusChange }) {
             />
           </div>
           <button
-            onClick={handleConnect}
+            onClick={() => handleConnect(connectionString)}
             className="bg-[#46C8FF] hover:bg-[#3BA3D0] text-white font-bold py-2 px-4 rounded-lg transition duration-300 border border-[#46C8FF] hover:border-[#3BA3D0] focus:outline-none focus:ring-2 focus:ring-[#46C8FF] focus:ring-opacity-50"
           >
             Connect
