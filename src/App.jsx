@@ -3,7 +3,13 @@ import Config from "./components/Config";
 import useApiConnection from "./hooks/useApiConnection";
 
 const App = () => {
-  const { status, checkApiKeyStatus, logoUrl } = useApiConnection();
+  const {
+    status,
+    checkApiKeyStatus,
+    logoUrl,
+    pendingConnection,
+    clearPendingConnection,
+  } = useApiConnection();
   return (
     <div className="p-6 bg-[#25272C] min-h-screen flex flex-col items-center">
       <img src={logoUrl} alt="AnythingLLM Logo" className="w-40 mb-6" />
@@ -12,7 +18,12 @@ const App = () => {
           Right click on any page and send selected text or entire pages to
           AnythingLLM.
         </p>
-        <Config status={status} onStatusChange={checkApiKeyStatus} />
+        <Config
+          status={status}
+          onStatusChange={checkApiKeyStatus}
+          pendingConnection={pendingConnection}
+          onPendingConnectionHandled={clearPendingConnection}
+        />
       </div>
     </div>
   );

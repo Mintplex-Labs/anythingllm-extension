@@ -286,18 +286,41 @@ chrome.runtime.onInstalled.addListener(async () => {
   await ExtensionModel.checkApiKeyValidity();
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
   if (message.action === "connectionUpdated") return ExtensionModel.checkApiKeyValidity();
 
+  // Connection strings posted by web pages are never saved directly - they are
+  // held as a pending request until the user approves them in the popup.
   if (message.action === "newApiKey") {
-    const [apiBase, apiKey] = message.connectionString.split("|");
-    chrome.storage.sync.set({ apiBase, apiKey }, () => {
-      ExtensionModel.checkApiKeyValidity();
-      chrome.action.openPopup();
-    });
+    if (sender.id !== chrome.runtime.id || !sender.tab) return;
+    const connection = parseConnectionString(message.connectionString);
+    if (!connection) return;
+    const requestedBy = sender.origin || new URL(sender.url).origin;
+    chrome.storage.session.set(
+      { pendingConnection: { ...connection, requestedBy } },
+      () => chrome.action.openPopup()
+    );
     return;
   }
 });
+
+/**
+ * Parses an `apiBase|apiKey` connection string.
+ * @param {string} connectionString
+ * @returns {{apiBase: string, apiKey: string} | null} null if malformed or apiBase is not http(s)
+ */
+function parseConnectionString(connectionString) {
+  if (typeof connectionString !== "string") return null;
+  const [apiBase, apiKey] = connectionString.split("|");
+  if (!apiBase || !apiKey) return null;
+  try {
+    const { protocol } = new URL(apiBase);
+    if (protocol !== "http:" && protocol !== "https:") return null;
+  } catch {
+    return null;
+  }
+  return { apiBase, apiKey };
+}
 
 function getPageContent(tabId) {
   return new Promise((resolve, reject) => {
