@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AnythingLLM microphone access</title>
+    <style>
+      body {
+        font-family: system-ui, Helvetica, Arial, sans-serif;
+        background: #18181b;
+        color: #fafafa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+      @media (prefers-color-scheme: light) {
+        body {
+          background: #ffffff;
+          color: #0f172a;
+        }
+      }
+      p {
+        max-width: 420px;
+        text-align: center;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="status">Allow microphone access in the prompt to use voice input.</p>
+    <script src="permission.js"></script>
+  </body>
+</html>

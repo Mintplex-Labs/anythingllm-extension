@@ -14,11 +14,24 @@
     "activeTab",
     "storage",
     "notifications",
-    "alarms"
+    "alarms",
+    "sidePanel",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Open AnythingLLM chat"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },

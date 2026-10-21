@@ -1,8 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: ["./index.html", "./sidepanel.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {}
   },
-  plugins: []
+  plugins: [
+    function ({ addVariant }) {
+      addVariant("light", "@media (prefers-color-scheme: light)");
+    }
+  ]
 }

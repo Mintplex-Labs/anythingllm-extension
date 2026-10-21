@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import AnythingLLMLogo from "@/media/anything-llm.png";
+import AnythingLLMLightLogo from "@/media/anything-llm-dark.png";
 import BrowserExtension from "@/models/browserExtension";
+import { isLightMode } from "@/utils/theme";
+
+const DEFAULT_LOGO = isLightMode() ? AnythingLLMLightLogo : AnythingLLMLogo;
 
 /**
  * Fetches connection information for API key provided
@@ -11,7 +15,7 @@ import BrowserExtension from "@/models/browserExtension";
  */
 export default function useApiConnection() {
   const [status, setStatus] = useState("loading");
-  const [logoUrl, setLogoUrl] = useState(AnythingLLMLogo);
+  const [logoUrl, setLogoUrl] = useState(DEFAULT_LOGO);
   const [pendingConnection, setPendingConnection] = useState(null);
 
   useEffect(() => {
@@ -20,7 +24,7 @@ export default function useApiConnection() {
     chrome.storage.session
       .get(["pendingConnection"])
       .then(({ pendingConnection }) =>
-        setPendingConnection(pendingConnection || null),
+        setPendingConnection(pendingConnection || null)
       );
 
     const onStorageChanged = (changes, area) => {
@@ -71,7 +75,7 @@ export default function useApiConnection() {
     const { apiBase } = await chrome.storage.sync.get(["apiBase"]);
     if (!apiBase) return;
     const { success, logoURL } = await BrowserExtension.fetchLogo(apiBase);
-    setLogoUrl(success ? logoURL : AnythingLLMLogo);
+    setLogoUrl(success ? logoURL : DEFAULT_LOGO);
   };
 
   const onConnectionChange = () => {

@@ -1,6 +1,46 @@
+// One-click prompts that run against the selected text in the side panel.
+const QUICK_ACTIONS = {
+  summarize: {
+    title: "Summarize",
+    prompt: "Summarize the selected text.",
+  },
+  explain: {
+    title: "Explain",
+    prompt: "Explain the selected text in simple terms.",
+  },
+  rewrite: {
+    title: "Rewrite",
+    prompt:
+      "Rewrite the selected text to be clearer and more concise. Reply with only the rewritten text.",
+  },
+  fixGrammar: {
+    title: "Fix spelling & grammar",
+    prompt:
+      "Fix any spelling and grammar mistakes in the selected text without changing its meaning. Reply with only the corrected text.",
+  },
+};
+
 const ContextMenuModel = {
   async create(workspaces) {
     await chrome.contextMenus.removeAll();
+
+    chrome.contextMenus.create({
+      id: "askAnythingLLM",
+      title: "Ask AnythingLLM about this",
+      contexts: ["selection"],
+    });
+    for (const [id, action] of Object.entries(QUICK_ACTIONS)) {
+      chrome.contextMenus.create({
+        id: `quickAction-${id}`,
+        title: action.title,
+        contexts: ["selection"],
+      });
+    }
+    chrome.contextMenus.create({
+      id: "separator",
+      type: "separator",
+      contexts: ["selection"],
+    });
 
     if (workspaces && workspaces.length > 0) {
       chrome.contextMenus.create({
@@ -337,6 +377,24 @@ function getPageContent(tabId) {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  // sidePanel.open must run before any await to keep the user gesture.
+  if (
+    info.menuItemId === "askAnythingLLM" ||
+    info.menuItemId.startsWith("quickAction-")
+  ) {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+    const action = QUICK_ACTIONS[info.menuItemId.replace("quickAction-", "")];
+    chrome.storage.session.set({
+      pendingSelection: {
+        text: info.selectionText,
+        title: tab.title,
+        url: tab.url,
+        prompt: action?.prompt ?? null,
+      },
+    });
+    return;
+  }
+
   if (info.menuItemId === "saveToAnythingLLM") {
     ExtensionModel.saveToAnythingLLM(info.selectionText, tab.title, tab.url);
     return;
@@ -388,6 +446,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       });
     return;
   }
+});
+
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === "open-side-panel")
+    chrome.sidePanel.open({ windowId: tab.windowId });
 });
 
 // Remove context menu items when connection is lost
