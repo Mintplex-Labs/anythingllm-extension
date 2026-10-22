@@ -6,14 +6,13 @@ const NAV_BUTTON_CLASS =
 
 /**
  * Question text on the left, pagination and a close-and-skip button on the right.
- * Pagination is hidden for single-question surveys and after the user responded.
+ * Pagination is hidden for single-question surveys.
  */
 export default function Header({
   question,
   index,
   total,
   isSingle,
-  responded,
   onPrev,
   onNext,
   onClose,
@@ -25,7 +24,7 @@ export default function Header({
       <p className="flex-1 min-w-0 text-white light:text-slate-900 text-sm font-medium leading-5 break-words">
         {question}
       </p>
-      {!isSingle && !responded && (
+      {!isSingle && (
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onPrev}
@@ -50,7 +49,6 @@ export default function Header({
       )}
       <button
         onClick={onClose}
-        disabled={responded}
         aria-label="Close and skip"
         className={`${NAV_BUTTON_CLASS} shrink-0`}
       >

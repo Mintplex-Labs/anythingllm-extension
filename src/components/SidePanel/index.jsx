@@ -15,7 +15,10 @@ export default function SidePanel() {
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
   const abortController = useRef(null);
+  const listRef = useRef(null);
   const bottomRef = useRef(null);
+  // Follow the stream only while the user is already at the bottom.
+  const stickToBottom = useRef(true);
 
   useEffect(() => {
     loadWorkspaces();
@@ -28,8 +31,15 @@ export default function SidePanel() {
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+    if (stickToBottom.current)
+      bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages]);
+
+  function trackScroll() {
+    const list = listRef.current;
+    stickToBottom.current =
+      list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  }
 
   async function loadWorkspaces() {
     const { apiBase, apiKey } = await chrome.storage.sync.get([
@@ -77,6 +87,7 @@ export default function SidePanel() {
         prev.map((m) => (m.id === replyId ? applyChunk(m, chunk) : m))
       );
 
+    stickToBottom.current = true;
     setStreaming(true);
     setMessages((prev) => [
       ...prev,
@@ -169,7 +180,11 @@ export default function SidePanel() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-y-5">
+      <div
+        ref={listRef}
+        onScroll={trackScroll}
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-y-5"
+      >
         {messages.length === 0 && (
           <p className="text-sm text-zinc-400 light:text-slate-500 text-center mt-8">
             Ask about this page or your workspace documents. Type @ to add other
@@ -203,7 +218,7 @@ export default function SidePanel() {
  */
 function applyChunk(reply, chunk) {
   if (chunk.type === "textResponseChunk")
-    return { ...reply, content: reply.content + (chunk.textResponse ?? "") };
+    return { ...reply, content: reply.content + (textOf(chunk) ?? "") };
   if (chunk.type === "textResponse")
     return { ...reply, content: textOf(chunk) ?? "" };
   if (chunk.type === "finalizeResponseStream")
@@ -211,24 +226,24 @@ function applyChunk(reply, chunk) {
       {
         ...reply,
         content: textOf(chunk) || reply.content,
-        sources: chunk.sources ?? reply.sources,
-        metrics: chunk.metrics ?? reply.metrics,
+        sources: Array.isArray(chunk.sources) ? chunk.sources : reply.sources,
+        metrics: isObject(chunk.metrics) ? chunk.metrics : reply.metrics,
       },
-      chunk.outputs ?? []
+      Array.isArray(chunk.outputs) ? chunk.outputs : []
     );
-  if (chunk.type === "agentThought")
+  if (chunk.type === "agentThought" && typeof chunk.thought === "string")
     return { ...reply, thoughts: [...reply.thoughts, chunk.thought] };
-  if (chunk.type === "toolApprovalRequest")
+  if (chunk.type === "toolApprovalRequest" && isObject(chunk.content))
     return { ...reply, approvals: [...reply.approvals, chunk.content] };
-  if (chunk.type === "clarificationRequest")
+  if (chunk.type === "clarificationRequest" && isObject(chunk.content))
     return { ...reply, questions: [...reply.questions, chunk.content] };
-  if (chunk.type === "rechartVisualize")
+  if (chunk.type === "rechartVisualize" && isObject(chunk.content))
     return { ...reply, charts: [...reply.charts, chunk.content] };
-  if (chunk.type === "scheduledJobCreated")
+  if (chunk.type === "scheduledJobCreated" && isObject(chunk.content))
     return { ...reply, jobs: [...reply.jobs, chunk.content] };
   if (chunk.type === "imageGenerationPending")
     return { ...reply, imagePending: true };
-  if (chunk.type === "modelRouteNotification")
+  if (chunk.type === "modelRouteNotification" && isObject(chunk.routedTo))
     return { ...reply, routedTo: chunk.routedTo };
   if (chunk.type === "fileDownload")
     return addOutputs(reply, [chunk.fileDownload]);
@@ -243,6 +258,10 @@ function textOf(chunk) {
   return typeof chunk.textResponse === "string" ? chunk.textResponse : null;
 }
 
+function isObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 /**
  * Files stream in as they are made and again in the final outputs list.
  * @param {object} reply
@@ -251,6 +270,7 @@ function textOf(chunk) {
 function addOutputs(reply, outputs) {
   const known = new Set(reply.outputs.map((o) => o.storageFilename));
   const added = outputs
+    .filter(isObject)
     .map(normalizeOutput)
     .filter((o) => o.storageFilename && !known.has(o.storageFilename));
   if (added.length === 0) return reply;

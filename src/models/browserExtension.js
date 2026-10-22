@@ -72,7 +72,7 @@ const BrowserExtension = {
    * @param {{
    *  apiBase: string,
    *  apiKey: string,
-   *  body: {workspaceId: number, message: string, sessionId: string, context: {title: string, url: string, content: string}[]},
+   *  body: {workspaceId: number, message: string, sessionId: string, context: {title: string, url: string, content: string}[], attachments: {name: string, mime: string, contentString: string}[]},
    *  signal: AbortSignal,
    *  onChunk: (chunk: object) => void,
    * }} params

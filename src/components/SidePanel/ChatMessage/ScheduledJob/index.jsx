@@ -9,28 +9,27 @@ import { ArrowRight, CalendarCheck } from "@phosphor-icons/react";
  * @param {{apiBase: string}} props.connection
  */
 export default function ScheduledJob({ job, connection }) {
+  if (!job.jobId) return null;
   const appBase = connection.apiBase.replace(/\/api\/?$/, "");
   return (
     <a
       href={`${appBase}/settings/scheduled-jobs/${job.jobId}/runs`}
       target="_blank"
       rel="noreferrer"
-      className="w-full flex items-center justify-between gap-x-3 bg-zinc-800 light:bg-slate-100 light:border light:border-slate-200/50 rounded-xl px-2 py-1 hover:bg-zinc-700 light:hover:bg-slate-50 transition-colors no-underline"
+      className="w-full flex items-center gap-x-3 bg-zinc-800 light:bg-slate-100 rounded-xl px-2 py-1.5 hover:bg-zinc-700 light:hover:bg-slate-200 transition-colors no-underline"
     >
-      <div className="flex items-center gap-x-3 min-w-0">
-        <div className="bg-sky-100 text-sky-700 rounded-lg flex items-center justify-center shrink-0 h-[48px] w-[48px]">
-          <CalendarCheck size={24} weight="bold" />
-        </div>
-        <div className="flex flex-col min-w-0 text-left">
-          <p className="text-white light:text-slate-900 text-sm font-medium truncate leading-snug">
-            {job.jobName || "Scheduled job"}
-          </p>
-          <p className="text-zinc-400 light:text-slate-500 text-xs leading-snug truncate">
-            Scheduled job created{job.schedule ? ` · ${job.schedule}` : ""}
-          </p>
-        </div>
+      <div className="bg-sky-100 text-sky-700 rounded-lg flex items-center justify-center shrink-0 h-[40px] w-[40px]">
+        <CalendarCheck size={22} weight="bold" />
       </div>
-      <div className="flex items-center gap-x-1 px-3 py-2 rounded-lg border border-zinc-600 light:border-slate-300 text-white light:text-slate-900 text-xs font-medium shrink-0">
+      <div className="flex flex-col min-w-0 flex-1 text-left">
+        <p className="text-white light:text-slate-900 text-sm font-medium leading-snug break-words">
+          {job.jobName || "Scheduled job"}
+        </p>
+        <p className="text-zinc-400 light:text-slate-500 text-xs leading-snug break-words">
+          Scheduled job created{job.schedule ? ` · ${job.schedule}` : ""}
+        </p>
+      </div>
+      <div className="flex items-center gap-x-1 pr-2 text-white light:text-slate-900 text-xs font-medium shrink-0">
         <span>View job</span>
         <ArrowRight size={14} weight="bold" />
       </div>

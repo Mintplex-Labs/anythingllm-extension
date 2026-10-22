@@ -28,7 +28,7 @@ export default function MicButton({ onTranscript }) {
     const speech = new window.webkitSpeechRecognition();
     speech.continuous = true;
     speech.interimResults = true;
-    speech.lang = navigator.language ?? "en-US";
+    speech.lang = navigator.language;
     speech.onresult = (e) => {
       restartSilenceTimer();
       for (let i = e.resultIndex; i < e.results.length; i++) {

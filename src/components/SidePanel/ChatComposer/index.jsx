@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowUp, At, Globe, Plus, TextAa } from "@phosphor-icons/react";
-import { getActiveTab, readTabText } from "@/utils/tabs";
+import {
+  getActiveTab,
+  hostnameOf,
+  isReadable,
+  readTabText,
+} from "@/utils/tabs";
 import { attachmentProblem, fileToAttachment } from "@/utils/attachments";
 import useFileDrop from "@/hooks/useFileDrop";
 import ContextCard from "../ContextCard";
@@ -29,13 +34,17 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   const [notice, setNotice] = useState(null);
   const [openTabs, setOpenTabs] = useState([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Text the user dismissed the picker for, so "ask @bob" stays typed without reopening it.
+  const [dismissedText, setDismissedText] = useState(null);
   const [highlighted, setHighlighted] = useState(0);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const onSendRef = useRef(onSend);
+  onSendRef.current = onSend;
   const dragging = useFileDrop(addFiles);
 
   const mention = text.match(MENTION_PATTERN);
-  const showPicker = pickerOpen || !!mention;
+  const showPicker = pickerOpen || (!!mention && dismissedText !== text);
   const query = (mention?.[1] ?? "").toLowerCase();
 
   // A selection stands in for the page it came from.
@@ -45,13 +54,14 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
     ? [activeTab, ...mentionedTabs.filter((t) => t.id !== activeTab.id)]
     : mentionedTabs;
   const pageCount = attachedTabs.length + (selection ? 1 : 0);
-  const tabChoices = showPicker
-    ? openTabs
-        .filter((tab) => !attachedTabs.some((t) => t.id === tab.id))
-        .filter((tab) =>
-          `${tab.title} ${tab.url}`.toLowerCase().includes(query)
-        )
-    : [];
+  const tabChoices =
+    showPicker && pageCount < MAX_PAGES
+      ? openTabs
+          .filter((tab) => !attachedTabs.some((t) => t.id === tab.id))
+          .filter((tab) =>
+            `${tab.title} ${tab.url}`.toLowerCase().includes(query)
+          )
+      : [];
   const highlightedIndex = Math.min(highlighted, tabChoices.length - 1);
 
   useEffect(() => {
@@ -72,7 +82,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
       chrome.storage.session.remove("pendingSelection");
       // Quick actions from the context menu carry their own prompt and send right away.
       if (pendingSelection.prompt)
-        return onSend(
+        return onSendRef.current(
           pendingSelection.prompt,
           [selectionPage(pendingSelection)],
           []
@@ -112,14 +122,15 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
 
   function closePicker() {
     setPickerOpen(false);
-    setText((prev) =>
-      prev.replace(MENTION_PATTERN, (m) => (m.startsWith("@") ? "" : m[0]))
-    );
+    setDismissedText(text);
   }
 
   function addTab(tab) {
     setMentionedTabs((prev) => [...prev, tab]);
-    closePicker();
+    setPickerOpen(false);
+    setText((prev) =>
+      prev.replace(MENTION_PATTERN, (m) => (m.startsWith("@") ? "" : m[0]))
+    );
   }
 
   function removeTab(tab) {
@@ -313,28 +324,12 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   );
 }
 
-/**
- * Only http(s) tabs can be read by the extension.
- * @param {chrome.tabs.Tab|null} tab
- */
-function isReadable(tab) {
-  return !!tab && /^https?:/.test(tab.url ?? "");
-}
-
 function selectionPage(selection) {
   return {
     title: `Selected text from ${selection.title}`,
     url: selection.url,
     content: selection.text,
   };
-}
-
-function hostnameOf(url) {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
 }
 
 function TabPicker({

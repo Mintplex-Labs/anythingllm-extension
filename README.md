@@ -80,3 +80,9 @@ Contributions are welcome! Feel free to submit a PR.
 
 Copyright © 2024 [Mintplex Labs](https://github.com/Mintplex-Labs). <br />
 This project is [MIT](../LICENSE) licensed.
+
+## Side panel chat
+
+Open the panel from the toolbar popup ("Open chat") or with `Alt+Shift+L`. It chats with the selected workspace and sends the current page as context. Type `@` to attach other open tabs, drop or paste files to attach them, and use the microphone button to dictate. Right-click highlighted text for "Ask AnythingLLM about this" or a quick action (Summarize, Explain, Rewrite, Fix spelling & grammar).
+
+Chrome cannot show the microphone prompt inside a side panel, so the first use of the microphone opens a small tab that asks for permission once.

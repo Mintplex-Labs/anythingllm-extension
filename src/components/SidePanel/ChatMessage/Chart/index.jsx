@@ -29,6 +29,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { isLightMode } from "@/utils/theme";
 
 // Same palette as the main app's chart helpers.
 const COLORS = [
@@ -42,14 +43,29 @@ const COLORS = [
   "#ec4899",
 ];
 const AXIS = { stroke: "#71717a", fontSize: 11 };
-const TOOLTIP = {
-  contentStyle: {
-    background: "#27272a",
-    border: "1px solid #3f3f46",
-    borderRadius: 8,
-    fontSize: 12,
-  },
-};
+
+/**
+ * Recharts takes colours as props, so the theme is read on each render.
+ * @returns {{grid: string, treemapStroke: string, tooltip: object}}
+ */
+function themeColors() {
+  const light = isLightMode();
+  const grid = light ? "#e2e8f0" : "#3f3f46";
+  return {
+    grid,
+    treemapStroke: light ? "#ffffff" : "#18181b",
+    tooltip: {
+      cursor: { fill: "rgba(113, 113, 122, 0.2)" },
+      contentStyle: {
+        background: light ? "#ffffff" : "#27272a",
+        border: `1px solid ${grid}`,
+        borderRadius: 8,
+        fontSize: 12,
+        color: light ? "#0f172a" : "#ffffff",
+      },
+    },
+  };
+}
 
 /**
  * Renders the chart an agent produced with the rechart tool.
@@ -63,7 +79,7 @@ export default function Chart({ chart }) {
   const value = keys[1] ?? "value";
 
   return (
-    <div className="bg-zinc-800 light:bg-white light:border light:border-slate-300 rounded-xl p-4 flex flex-col gap-y-2">
+    <div className="bg-zinc-800 light:bg-slate-100 rounded-xl p-4 flex flex-col gap-y-2">
       {!!chart.title && (
         <h3 className="text-sm font-medium text-white light:text-slate-900">
           {chart.title}
@@ -71,7 +87,13 @@ export default function Chart({ chart }) {
       )}
       <div className="h-[240px] w-full text-xs">
         <ResponsiveContainer width="100%" height="100%">
-          {renderChart(chart.type?.toLowerCase(), data, value, keys)}
+          {renderChart(
+            chart.type?.toLowerCase(),
+            data,
+            value,
+            keys,
+            themeColors()
+          )}
         </ResponsiveContainer>
       </div>
     </div>
@@ -88,14 +110,20 @@ function parseDataset(dataset) {
   }
 }
 
-function renderChart(type, data, value, keys) {
+function renderChart(
+  type,
+  data,
+  value,
+  keys,
+  { grid, treemapStroke, tooltip }
+) {
   if (type === "area")
     return (
       <AreaChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+        <CartesianGrid strokeDasharray="3 3" stroke={grid} />
         <XAxis dataKey="name" {...AXIS} />
         <YAxis {...AXIS} />
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Area
           dataKey={value}
           stroke={COLORS[0]}
@@ -107,30 +135,30 @@ function renderChart(type, data, value, keys) {
   if (type === "bar")
     return (
       <BarChart data={data} layout="vertical">
-        <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+        <CartesianGrid strokeDasharray="3 3" stroke={grid} />
         <XAxis type="number" {...AXIS} />
-        <YAxis type="category" dataKey="name" width={90} {...AXIS} />
-        <Tooltip {...TOOLTIP} />
+        <YAxis type="category" dataKey="name" width={60} {...AXIS} />
+        <Tooltip {...tooltip} />
         <Bar dataKey={value} fill={COLORS[0]} radius={4} />
       </BarChart>
     );
   if (type === "line")
     return (
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+        <CartesianGrid strokeDasharray="3 3" stroke={grid} />
         <XAxis dataKey="name" {...AXIS} />
         <YAxis {...AXIS} />
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Line dataKey={value} stroke={COLORS[0]} dot={false} />
       </LineChart>
     );
   if (type === "composed")
     return (
       <ComposedChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+        <CartesianGrid strokeDasharray="3 3" stroke={grid} />
         <XAxis dataKey="name" {...AXIS} />
         <YAxis {...AXIS} />
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Legend />
         {keys
           .slice(1)
@@ -150,17 +178,17 @@ function renderChart(type, data, value, keys) {
   if (type === "scatter")
     return (
       <ScatterChart>
-        <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+        <CartesianGrid strokeDasharray="3 3" stroke={grid} />
         <XAxis dataKey={keys[0]} {...AXIS} />
         <YAxis dataKey={value} {...AXIS} />
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Scatter data={data} fill={COLORS[0]} />
       </ScatterChart>
     );
   if (type === "pie")
     return (
       <PieChart>
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Legend />
         <Pie data={data} dataKey={value} nameKey="name" innerRadius="50%">
           {data.map((_, i) => (
@@ -172,10 +200,10 @@ function renderChart(type, data, value, keys) {
   if (type === "radar")
     return (
       <RadarChart data={data}>
-        <PolarGrid stroke="#3f3f46" />
+        <PolarGrid stroke={grid} />
         <PolarAngleAxis dataKey="name" {...AXIS} />
         <PolarRadiusAxis {...AXIS} />
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Radar
           dataKey={value}
           stroke={COLORS[0]}
@@ -187,7 +215,7 @@ function renderChart(type, data, value, keys) {
   if (type === "radialbar")
     return (
       <RadialBarChart data={data} innerRadius="20%" outerRadius="90%">
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Legend />
         <RadialBar dataKey={value} background>
           {data.map((_, i) => (
@@ -202,14 +230,14 @@ function renderChart(type, data, value, keys) {
         data={data}
         dataKey={value}
         nameKey="name"
-        stroke="#18181b"
+        stroke={treemapStroke}
         fill={COLORS[0]}
       />
     );
   if (type === "funnel")
     return (
       <FunnelChart>
-        <Tooltip {...TOOLTIP} />
+        <Tooltip {...tooltip} />
         <Funnel data={data} dataKey={value} nameKey="name">
           {data.map((_, i) => (
             <Cell key={i} fill={COLORS[i % COLORS.length]} />

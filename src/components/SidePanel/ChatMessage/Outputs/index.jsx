@@ -33,7 +33,7 @@ function GeneratedImage({ output, connection }) {
   useEffect(() => {
     let active = true;
     BrowserExtension.generatedFile(connection, output).then((result) => {
-      if (!active) return;
+      if (!active) return URL.revokeObjectURL(result.url);
       setUrl(result.url);
       setError(result.error);
     });
@@ -41,6 +41,8 @@ function GeneratedImage({ output, connection }) {
       active = false;
     };
   }, [output.storageFilename]);
+
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
 
   if (error)
     return (
@@ -50,14 +52,14 @@ function GeneratedImage({ output, connection }) {
     );
   if (!url)
     return (
-      <div className="h-[160px] w-full rounded-lg bg-zinc-800 light:bg-slate-100 animate-pulse" />
+      <div className="h-[160px] w-full rounded-xl bg-zinc-800 light:bg-slate-100 animate-pulse" />
     );
   return (
     <a href={url} target="_blank" rel="noreferrer" className="w-fit">
       <img
         src={url}
         alt={output.prompt || output.filename}
-        className="rounded-lg max-w-full max-h-[320px]"
+        className="rounded-xl max-w-full max-h-[320px]"
       />
     </a>
   );
@@ -75,17 +77,17 @@ function GeneratedFile({ output, connection }) {
     link.href = url;
     link.download = output.filename;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   return (
-    <div className="flex items-center gap-x-2 rounded-lg bg-zinc-800 light:bg-slate-100 px-3 py-2">
+    <div className="flex items-center gap-x-3 rounded-xl bg-zinc-800 light:bg-slate-100 px-3 py-2.5">
       <FileArrowDown
         size={20}
         className="shrink-0 text-zinc-300 light:text-slate-600"
       />
       <div className="flex flex-col min-w-0 flex-1">
-        <p className="text-xs font-semibold text-white light:text-slate-900 truncate">
+        <p className="text-xs font-semibold text-white light:text-slate-900 break-words">
           {output.filename}
         </p>
         {!!output.fileSize && (

@@ -74,6 +74,16 @@ export function attachmentProblem(file) {
 }
 
 /**
+ * Opens an attachment in a new tab. Chrome refuses to open `data:` URLs
+ * directly, so the content is handed over as a blob URL.
+ * @param {Attachment} attachment
+ */
+export async function openAttachment(attachment) {
+  const blob = await fetch(attachment.contentString).then((res) => res.blob());
+  window.open(URL.createObjectURL(blob), "_blank");
+}
+
+/**
  * @param {{type?: string, mime?: string}} file
  * @returns {boolean}
  */

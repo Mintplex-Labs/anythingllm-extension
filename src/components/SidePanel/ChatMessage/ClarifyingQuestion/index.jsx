@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import BrowserExtension from "@/models/browserExtension";
 import useTimeoutProgress from "@/hooks/useTimeoutProgress";
+import TimeoutBar from "../TimeoutBar";
 import Header from "./Header";
 import InputForm from "./InputForm";
 import ChoiceForm from "./ChoiceForm";
@@ -41,9 +42,9 @@ export default function ClarifyingQuestion({ request, connection }) {
 
   if (!total) return null;
 
-  function updateDraft(patch, at = index) {
+  function updateDraft(patch) {
     setDrafts((prev) =>
-      prev.map((d, i) => (i === at ? { ...d, ...patch } : d))
+      prev.map((d, i) => (i === index ? { ...d, ...patch } : d))
     );
   }
 
@@ -106,7 +107,6 @@ export default function ClarifyingQuestion({ request, connection }) {
             index={index}
             total={total}
             isSingle={isSingle}
-            responded={responded}
             onPrev={() => setIndex(Math.max(0, index - 1))}
             onNext={() => advance()}
             onClose={() => send({ skipped: true })}
@@ -135,14 +135,7 @@ export default function ClarifyingQuestion({ request, connection }) {
             onNext={() => advance()}
             onSubmitAll={() => submitAll()}
           />
-          {!!timeoutMs && !engaged && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700 light:bg-slate-300">
-              <div
-                className="h-full bg-sky-500 light:bg-sky-600 transition-none"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          )}
+          {!!timeoutMs && !engaged && <TimeoutBar percent={progressPercent} />}
         </>
       )}
     </div>

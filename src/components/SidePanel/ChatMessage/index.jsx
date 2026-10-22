@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import markdownIt from "markdown-it";
 import {
   Check,
   CircleNotch,
@@ -7,7 +6,8 @@ import {
   Shuffle,
   XCircle,
 } from "@phosphor-icons/react";
-import { isImageFile } from "@/utils/attachments";
+import { isImageFile, openAttachment } from "@/utils/attachments";
+import { renderMarkdown } from "@/utils/markdown";
 import AttachmentCard from "../AttachmentCard";
 import Thoughts from "./Thoughts";
 import ToolApproval from "./ToolApproval";
@@ -21,13 +21,6 @@ const MARKDOWN_CLASSES =
   "text-sm leading-relaxed break-words text-white light:text-slate-900 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 [&_li]:mb-1 [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_a]:text-sky-400 light:[&_a]:text-sky-600 [&_a]:underline [&_pre]:bg-zinc-800 light:[&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-2 [&_code]:font-mono [&_code]:text-xs";
 // Reasoning models wrap their thinking in tags; an unclosed tag means it is still streaming.
 const THINK_PATTERN = /<(think|thinking|thought)>([\s\S]*?)(?:<\/\1>|$)/g;
-
-const markdown = markdownIt({ html: false, linkify: true, breaks: true });
-// Links would otherwise navigate the side panel itself.
-markdown.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
-  tokens[idx].attrSet("target", "_blank");
-  return self.renderToken(tokens, idx, options);
-};
 
 /**
  * @param {Object} props
@@ -45,14 +38,17 @@ export default function ChatMessage({ message, connection }) {
     );
 
   const { thoughts, text } = splitThinking(message.content);
-  const allThoughts = [...message.thoughts, ...thoughts];
+  const activity = [
+    ...message.thoughts.map((content) => ({ type: "status", content })),
+    ...thoughts.map((content) => ({ type: "thought", content })),
+  ];
   const hasOutput =
     !!text || message.outputs.length > 0 || message.charts.length > 0;
 
   return (
-    <div className="group flex flex-col gap-y-2">
+    <div className="group flex flex-col gap-y-3">
       {!!message.routedTo && <RouteNote routedTo={message.routedTo} />}
-      <Thoughts thoughts={allThoughts} streaming={!message.done} />
+      <Thoughts nodes={activity} streaming={!message.done} />
       {message.approvals.map((approval) => (
         <ToolApproval
           key={approval.requestId}
@@ -67,7 +63,7 @@ export default function ChatMessage({ message, connection }) {
           connection={connection}
         />
       ))}
-      {!hasOutput && !message.done && allThoughts.length === 0 && (
+      {!hasOutput && !message.done && activity.length === 0 && (
         <p className="text-sm text-zinc-400 light:text-slate-500 animate-pulse">
           Thinking...
         </p>
@@ -83,7 +79,7 @@ export default function ChatMessage({ message, connection }) {
       {!!text && (
         <div
           className={MARKDOWN_CLASSES}
-          dangerouslySetInnerHTML={{ __html: markdown.render(text) }}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
         />
       )}
       {message.imagePending && <ImagePending aborted={message.done} />}
@@ -123,18 +119,18 @@ function UserMessage({ message }) {
       {images.length > 0 && (
         <div className="flex flex-wrap justify-end gap-2 max-w-[85%]">
           {images.map((image) => (
-            <a
+            <button
               key={image.id}
-              href={image.contentString}
-              target="_blank"
-              rel="noreferrer"
+              onClick={() => openAttachment(image)}
+              title={image.name}
+              className="border-none p-0 bg-transparent cursor-pointer hover:opacity-80 transition-opacity"
             >
               <img
                 src={image.contentString}
                 alt={image.name}
                 className="w-[120px] h-[120px] object-cover rounded-lg"
               />
-            </a>
+            </button>
           ))}
         </div>
       )}
@@ -153,7 +149,7 @@ function UserMessage({ message }) {
         {message.content}
       </div>
       {message.context.length > 0 && (
-        <p className="text-xs text-zinc-500 light:text-slate-500 truncate max-w-[85%]">
+        <p className="text-xs text-zinc-500 light:text-slate-500 text-right break-words max-w-[85%]">
           Using {message.context.join(", ")}
         </p>
       )}
@@ -168,7 +164,7 @@ function RouteNote({ routedTo }) {
         size={16}
         className="shrink-0 text-zinc-400 light:text-slate-600"
       />
-      <span className="text-sm text-zinc-400 light:text-slate-600 truncate">
+      <span className="text-sm text-zinc-400 light:text-slate-600 break-words min-w-0">
         Routed to{" "}
         <span className="text-zinc-50 light:text-slate-950">
           {routedTo.model}
@@ -204,7 +200,13 @@ function ImagePending({ aborted }) {
               className="animate-spin text-white light:text-slate-700"
             />
           )}
-          <p className="text-white light:text-slate-800 text-sm font-semibold">
+          <p
+            className={
+              aborted
+                ? "text-white/70 light:text-slate-600 text-sm font-medium"
+                : "text-white light:text-slate-800 text-sm font-semibold"
+            }
+          >
             {aborted
               ? "Image generation was aborted"
               : "Generating your image…"}
@@ -234,11 +236,13 @@ function ReplyFooter({ text, metrics }) {
       >
         {copied ? <Check size={14} /> : <Copy size={14} />}
       </button>
-      {!!metrics?.outputTps && (
-        <span>
-          {metrics.outputTps.toFixed(1)} tok/s · {metrics.duration.toFixed(1)}s
-        </span>
-      )}
+      {typeof metrics?.outputTps === "number" &&
+        typeof metrics?.duration === "number" && (
+          <span>
+            {metrics.outputTps.toFixed(1)} tok/s · {metrics.duration.toFixed(1)}
+            s
+          </span>
+        )}
     </div>
   );
 }

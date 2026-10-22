@@ -449,8 +449,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.commands.onCommand.addListener((command, tab) => {
-  if (command === "open-side-panel")
-    chrome.sidePanel.open({ windowId: tab.windowId });
+  if (command !== "open-side-panel" || !tab) return;
+  chrome.sidePanel.open({ windowId: tab.windowId });
 });
 
 // Remove context menu items when connection is lost

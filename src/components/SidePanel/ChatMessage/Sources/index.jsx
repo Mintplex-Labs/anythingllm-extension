@@ -42,7 +42,7 @@ function groupByTitle(sources = []) {
     const title = source.title || "Untitled";
     if (!groups.has(title))
       groups.set(title, { title, url: urlOf(source), texts: [] });
-    const text = omitChunkHeader(source.text);
+    const text = omitChunkHeader(source.text ?? "");
     if (text) groups.get(title).texts.push(text);
   }
   return [...groups.values()];
@@ -66,7 +66,7 @@ function omitChunkHeader(text = "") {
 
 function SourceItem({ source }) {
   return (
-    <div className="flex flex-col gap-y-1 rounded-lg bg-zinc-800 light:bg-slate-100 px-3 py-2 min-w-0">
+    <div className="flex flex-col gap-y-1 rounded-xl bg-zinc-800 light:bg-slate-100 px-3 py-2.5 min-w-0">
       <SourceTitle title={source.title} url={source.url} />
       {source.texts.length > 0 && (
         <p className="text-xs text-zinc-400 light:text-slate-500 line-clamp-3 break-words">
@@ -80,7 +80,7 @@ function SourceItem({ source }) {
 function SourceTitle({ title, url }) {
   if (!url)
     return (
-      <p className="text-xs font-semibold text-white light:text-slate-900 truncate">
+      <p className="text-xs font-semibold text-white light:text-slate-900 break-words">
         {title}
       </p>
     );
@@ -90,10 +90,10 @@ function SourceTitle({ title, url }) {
       href={url}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center gap-x-1 text-xs font-semibold text-white light:text-slate-900 hover:underline min-w-0"
+      className="flex items-start gap-x-1 text-xs font-semibold text-white light:text-slate-900 hover:underline min-w-0"
     >
-      <span className="truncate">{title}</span>
-      <ArrowSquareOut size={12} className="shrink-0" />
+      <span className="break-words min-w-0">{title}</span>
+      <ArrowSquareOut size={12} className="shrink-0 mt-0.5" />
     </a>
   );
 }

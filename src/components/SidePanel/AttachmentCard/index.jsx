@@ -12,7 +12,7 @@ import ContextCard from "../ContextCard";
 export default function AttachmentCard({
   attachment,
   onRemove = null,
-  background = undefined,
+  background,
 }) {
   const image = isImageFile(attachment);
   return (
