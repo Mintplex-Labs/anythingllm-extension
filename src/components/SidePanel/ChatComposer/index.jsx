@@ -27,7 +27,8 @@ const MAX_PAGES = 5;
 export default function ChatComposer({ streaming, onSend, onStop }) {
   const [text, setText] = useState("");
   const [activeTab, setActiveTab] = useState(null);
-  const [removedActiveTabId, setRemovedActiveTabId] = useState(null);
+  // Removing the current page card keeps it off until a new chat.
+  const [activeTabDismissed, setActiveTabDismissed] = useState(false);
   const [mentionedTabs, setMentionedTabs] = useState([]);
   const [selection, setSelection] = useState(null);
   const [attachments, setAttachments] = useState([]);
@@ -48,8 +49,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   const query = (mention?.[1] ?? "").toLowerCase();
 
   // A selection stands in for the page it came from.
-  const includeActiveTab =
-    !!activeTab && activeTab.id !== removedActiveTabId && !selection;
+  const includeActiveTab = !!activeTab && !activeTabDismissed && !selection;
   const attachedTabs = includeActiveTab
     ? [activeTab, ...mentionedTabs.filter((t) => t.id !== activeTab.id)]
     : mentionedTabs;
@@ -134,7 +134,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   }
 
   function removeTab(tab) {
-    if (tab.id === activeTab?.id) setRemovedActiveTabId(tab.id);
+    if (tab.id === activeTab?.id) setActiveTabDismissed(true);
     setMentionedTabs((prev) => prev.filter((t) => t.id !== tab.id));
   }
 
@@ -350,6 +350,7 @@ function TabPicker({
   return tabs.map((tab, i) => (
     <button
       key={tab.id}
+      ref={i === highlightedIndex ? scrollIntoView : null}
       onClick={() => onPick(tab)}
       onMouseEnter={() => onHighlight(i)}
       className={`border-none w-full flex items-center gap-x-2.5 text-left rounded-xl px-2 py-2 ${
@@ -369,6 +370,10 @@ function TabPicker({
       </div>
     </button>
   ));
+}
+
+function scrollIntoView(element) {
+  element?.scrollIntoView({ block: "nearest" });
 }
 
 function PickerNote({ text }) {
