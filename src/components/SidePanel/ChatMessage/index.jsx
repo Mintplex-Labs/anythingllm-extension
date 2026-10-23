@@ -30,13 +30,6 @@ const THINK_PATTERN = /<(think|thinking|thought)>([\s\S]*?)(?:<\/\1>|$)/g;
 export default function ChatMessage({ message, connection }) {
   if (message.role === "user") return <UserMessage message={message} />;
 
-  if (message.error)
-    return (
-      <div className="bg-red-500/10 border border-red-500/50 text-red-400 light:text-red-600 p-2.5 rounded-lg text-sm">
-        {message.error}
-      </div>
-    );
-
   const { thoughts, text } = splitThinking(message.content);
   const activity = [
     ...message.thoughts.map((content) => ({ type: "status", content })),
@@ -68,7 +61,7 @@ export default function ChatMessage({ message, connection }) {
           Thinking...
         </p>
       )}
-      {!hasOutput && message.done && (
+      {!hasOutput && message.done && !message.error && (
         <p className="text-sm text-zinc-400 light:text-slate-500">
           No response.
         </p>
@@ -88,6 +81,11 @@ export default function ChatMessage({ message, connection }) {
         <ScheduledJob key={job.jobId} job={job} connection={connection} />
       ))}
       <Sources sources={message.sources} />
+      {!!message.error && (
+        <div className="bg-red-500/10 border border-red-500/50 text-red-400 light:text-red-600 p-2.5 rounded-lg text-sm">
+          {message.error}
+        </div>
+      )}
       {message.done && !!text && <ReplyFooter text={text} />}
     </div>
   );
@@ -173,37 +171,41 @@ function RouteNote({ routedTo }) {
  * an image the spinner is swapped for a static notice.
  */
 function ImagePending({ aborted }) {
+  if (aborted)
+    return (
+      <ImagePendingFrame background="bg-gradient-to-br from-zinc-600 via-zinc-800 to-zinc-900 light:from-slate-200 light:via-slate-300 light:to-slate-100">
+        <XCircle
+          size={32}
+          weight="bold"
+          className="text-white/60 light:text-slate-500"
+        />
+        <p className="text-white/70 light:text-slate-600 text-sm font-medium">
+          Image generation was aborted
+        </p>
+      </ImagePendingFrame>
+    );
+
+  return (
+    <ImagePendingFrame background="bg-gradient-to-br from-zinc-600 via-zinc-800 to-zinc-900 light:from-slate-200 light:via-slate-300 light:to-slate-100 blur-2xl animate-pulse">
+      <CircleNotch
+        size={32}
+        weight="bold"
+        className="animate-spin text-white light:text-slate-700"
+      />
+      <p className="text-white light:text-slate-800 text-sm font-semibold">
+        Generating your image…
+      </p>
+    </ImagePendingFrame>
+  );
+}
+
+function ImagePendingFrame({ background, children }) {
   return (
     <div className="w-full max-w-[280px]">
       <div className="relative rounded-xl overflow-hidden aspect-square">
-        <div
-          className={`absolute inset-0 bg-gradient-to-br from-zinc-600 via-zinc-800 to-zinc-900 light:from-slate-200 light:via-slate-300 light:to-slate-100 ${aborted ? "" : "blur-2xl animate-pulse"}`}
-        />
+        <div className={`absolute inset-0 ${background}`} />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-y-3 text-center px-5">
-          {aborted ? (
-            <XCircle
-              size={32}
-              weight="bold"
-              className="text-white/60 light:text-slate-500"
-            />
-          ) : (
-            <CircleNotch
-              size={32}
-              weight="bold"
-              className="animate-spin text-white light:text-slate-700"
-            />
-          )}
-          <p
-            className={
-              aborted
-                ? "text-white/70 light:text-slate-600 text-sm font-medium"
-                : "text-white light:text-slate-800 text-sm font-semibold"
-            }
-          >
-            {aborted
-              ? "Image generation was aborted"
-              : "Generating your image…"}
-          </p>
+          {children}
         </div>
       </div>
     </div>

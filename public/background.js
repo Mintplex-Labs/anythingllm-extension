@@ -100,12 +100,15 @@ const ContextMenuModel = {
   },
 };
 
-// Connected: the toolbar icon opens the chat panel. Otherwise it opens the
-// popup so the user can connect.
+// Connected: the toolbar icon opens the chat panel. Otherwise, or while a
+// page's connection request waits for approval, it opens the popup.
 async function setActionBehavior(connected) {
-  await chrome.action.setPopup({ popup: connected ? "" : "index.html" });
+  const { pendingConnection } =
+    await chrome.storage.session.get("pendingConnection");
+  const openPanel = connected && !pendingConnection;
+  await chrome.action.setPopup({ popup: openPanel ? "" : "index.html" });
   await chrome.sidePanel.setPanelBehavior({
-    openPanelOnActionClick: connected,
+    openPanelOnActionClick: openPanel,
   });
 }
 

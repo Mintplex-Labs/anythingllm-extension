@@ -18,8 +18,8 @@ export default {
     function ({ addVariant }) {
       addVariant("light", "@media (prefers-color-scheme: light)")
     },
-    // The `animate-in`/`animate-out` utilities from `tailwindcss-animate`, the
-    // same subset the main app defines, so its ChainOfThought keeps its classes.
+    // Enter/exit animation utilities (`animate-in`, `fade-in-0`, ...) as
+    // defined by `tailwindcss-animate`, used by the chain of thought.
     function ({ addBase, addUtilities }) {
       addBase({
         "@keyframes enter": {

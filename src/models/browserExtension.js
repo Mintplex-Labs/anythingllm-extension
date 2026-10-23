@@ -210,7 +210,7 @@ const BrowserExtension = {
         .then((res) => res.json())
         .then((data) => {
           if (!!data.error)
-            throw new Error(errorData.error || "Failed to disconnect");
+            throw new Error(data.error || "Failed to disconnect");
           return;
         });
       return { success: true, error: null };

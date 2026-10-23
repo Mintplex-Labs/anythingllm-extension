@@ -30,8 +30,10 @@ export default function SidePanel() {
   useEffect(() => {
     loadWorkspaces();
     const onStorageChanged = (changes, area) => {
-      if (area === "sync" && (changes.apiBase || changes.apiKey))
-        loadWorkspaces();
+      if (area !== "sync" || !(changes.apiBase || changes.apiKey)) return;
+      // A chat belongs to the instance it was started on.
+      startNewChat();
+      loadWorkspaces();
     };
     chrome.storage.onChanged.addListener(onStorageChanged);
     return () => chrome.storage.onChanged.removeListener(onStorageChanged);
@@ -94,12 +96,14 @@ export default function SidePanel() {
     chrome.runtime.sendMessage({ action: "connectionUpdated" });
   }
 
-  async function createThread() {
+  async function createThread(signal) {
     const { threadId, error } = await BrowserExtension.newThread(
       connection,
       workspaceId
     );
     if (error) throw new Error(error);
+    // New chat or a workspace switch happened while the thread was being made.
+    signal.throwIfAborted();
     setThreadId(threadId);
     return threadId;
   }
@@ -143,7 +147,7 @@ export default function SidePanel() {
     ]);
 
     try {
-      const thread = threadId ?? (await createThread());
+      const thread = threadId ?? (await createThread(controller.signal));
       await BrowserExtension.streamChat({
         ...connection,
         signal: controller.signal,
@@ -175,7 +179,10 @@ export default function SidePanel() {
     );
   if (status === "offline")
     return (
-      <PanelMessage text="Could not reach AnythingLLM. Make sure your instance is running and the extension is connected." />
+      <PanelMessage
+        text="Could not reach AnythingLLM. Make sure your instance is running and the extension is connected."
+        onRetry={loadWorkspaces}
+      />
     );
   if (workspaces.length === 0)
     return (
@@ -331,7 +338,10 @@ function HeaderMenu({ onDisconnect }) {
 
   useEffect(() => {
     if (!open) return;
-    const close = () => setOpen(false);
+    const close = (e) => {
+      if (e.type === "keydown" && e.key !== "Escape") return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", close);
     return () => {
@@ -363,12 +373,25 @@ function HeaderMenu({ onDisconnect }) {
   );
 }
 
-function PanelMessage({ text }) {
+/**
+ * @param {Object} props
+ * @param {string} props.text
+ * @param {() => void} [props.onRetry] - shows a Retry button when given
+ */
+function PanelMessage({ text, onRetry = null }) {
   return (
-    <div className="flex items-center justify-center h-screen w-full bg-zinc-900 light:bg-white p-6">
+    <div className="flex flex-col items-center justify-center gap-y-4 h-screen w-full bg-zinc-900 light:bg-white p-6">
       <p className="text-zinc-400 light:text-slate-600 text-sm text-center">
         {text}
       </p>
+      {!!onRetry && (
+        <button
+          onClick={onRetry}
+          className="border-none h-[34px] px-4 rounded-lg text-sm font-medium bg-zinc-50 light:bg-slate-900 text-zinc-950 light:text-white hover:opacity-80"
+        >
+          Retry
+        </button>
+      )}
     </div>
   );
 }

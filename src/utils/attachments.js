@@ -80,7 +80,9 @@ export function attachmentProblem(file) {
  */
 export async function openAttachment(attachment) {
   const blob = await fetch(attachment.contentString).then((res) => res.blob());
-  window.open(URL.createObjectURL(blob), "_blank");
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**

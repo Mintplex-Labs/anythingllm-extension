@@ -28,13 +28,12 @@ export default function Thoughts({ nodes, streaming }) {
   const hasStatusNodes = nodes.some((node) => node.type === "status");
   const totalDuration =
     finalizedAt && arrivals[0] ? (finalizedAt - arrivals[0]) / 1000 : null;
-  const headerLabel = thinking
-    ? "Thinking..."
-    : streaming
-      ? cleanStatus(lastNode.content)
-      : totalDuration
-        ? `Thought for ${formatDuration(totalDuration)}`
-        : "Thoughts";
+  const headerLabel = labelFor({
+    thinking,
+    streaming,
+    lastNode,
+    totalDuration,
+  });
 
   return (
     <ChainOfThought open={expanded} onOpenChange={setExpanded}>
@@ -82,6 +81,13 @@ export default function Thoughts({ nodes, streaming }) {
       </ChainOfThoughtContent>
     </ChainOfThought>
   );
+}
+
+function labelFor({ thinking, streaming, lastNode, totalDuration }) {
+  if (thinking) return "Thinking...";
+  if (streaming) return cleanStatus(lastNode.content);
+  if (totalDuration) return `Thought for ${formatDuration(totalDuration)}`;
+  return "Thoughts";
 }
 
 function cleanStatus(content) {
