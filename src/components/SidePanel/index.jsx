@@ -7,7 +7,7 @@ import {
   SignOut,
   WifiSlash,
 } from "@phosphor-icons/react";
-import BrowserExtension from "@/models/browserExtension";
+import BrowserExtension, { RevokedKeyError } from "@/models/browserExtension";
 import { isServerOutdated, updateUrl } from "@/utils/serverVersion";
 import ChatComposer from "./ChatComposer";
 import ChatMessage from "./ChatMessage";
@@ -17,6 +17,8 @@ import Screen, { PRIMARY_BUTTON, TEXT_BUTTON } from "./Screen";
 import UpdateRequired from "./UpdateRequired";
 
 const WORKSPACE_STORAGE_KEY = "chatWorkspaceId";
+const REVOKED_NOTICE =
+  "This connection was removed in AnythingLLM. Connect again to keep chatting.";
 
 export default function SidePanel() {
   const [status, setStatus] = useState("loading");
@@ -83,10 +85,7 @@ export default function SidePanel() {
         BrowserExtension.serverVersion(apiBase),
         chrome.storage.local.get(WORKSPACE_STORAGE_KEY),
       ]);
-    if (revoked)
-      return forgetConnection(
-        "This connection was removed in AnythingLLM. Connect again to keep chatting."
-      );
+    if (revoked) return forgetConnection(REVOKED_NOTICE);
     if (error) return setStatus("offline");
     if (isServerOutdated(version)) return setStatus("outdated");
 
@@ -228,7 +227,8 @@ export default function SidePanel() {
         onChunk: updateReply,
       });
     } catch (error) {
-      if (error.name !== "AbortError")
+      if (error instanceof RevokedKeyError) forgetConnection(REVOKED_NOTICE);
+      else if (error.name !== "AbortError")
         updateReply({ type: "abort", error: error.message });
     }
     updateReply({ type: "done" });

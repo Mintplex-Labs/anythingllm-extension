@@ -1,5 +1,13 @@
 import { isLightMode } from "@/utils/theme";
 
+// AnythingLLM answered 403: the API key was deleted there.
+export class RevokedKeyError extends Error {
+  constructor() {
+    super("This connection was removed in AnythingLLM.");
+    this.name = "RevokedKeyError";
+  }
+}
+
 const BrowserExtension = {
   checkApiKey: async function (apiBase, apiKey) {
     return await fetch(`${apiBase}/browser-extension/check`, {
@@ -90,6 +98,7 @@ const BrowserExtension = {
    * @param {{apiBase: string, apiKey: string}} connection
    * @param {number} workspaceId
    * @returns {Promise<{threadId: number|null, error: string|null}>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
    */
   newThread: async function ({ apiBase, apiKey }, workspaceId) {
     return await fetch(`${apiBase}/browser-extension/threads`, {
@@ -101,11 +110,15 @@ const BrowserExtension = {
       body: JSON.stringify({ workspaceId }),
     })
       .then((res) => {
+        if (res.status === 403) throw new RevokedKeyError();
         if (!res.ok) throw new Error("Could not start a thread");
         return res.json();
       })
       .then((data) => ({ threadId: data.thread.id, error: null }))
-      .catch((e) => ({ threadId: null, error: e.message }));
+      .catch((e) => {
+        if (e instanceof RevokedKeyError) throw e;
+        return { threadId: null, error: e.message };
+      });
   },
 
   /**
@@ -118,6 +131,7 @@ const BrowserExtension = {
    *  onChunk: (chunk: object) => void,
    * }} params
    * @returns {Promise<void>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
    */
   streamChat: async function ({ apiBase, apiKey, body, signal, onChunk }) {
     const response = await fetch(`${apiBase}/browser-extension/stream-chat`, {
@@ -129,6 +143,7 @@ const BrowserExtension = {
       body: JSON.stringify(body),
       signal,
     });
+    if (response.status === 403) throw new RevokedKeyError();
     if (!response.ok) {
       const { error } = await response.json().catch(() => ({}));
       throw new Error(error || "Failed to send message");
