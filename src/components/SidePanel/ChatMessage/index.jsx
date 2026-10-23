@@ -88,9 +88,7 @@ export default function ChatMessage({ message, connection }) {
         <ScheduledJob key={job.jobId} job={job} connection={connection} />
       ))}
       <Sources sources={message.sources} />
-      {message.done && !!text && (
-        <ReplyFooter text={text} metrics={message.metrics} />
-      )}
+      {message.done && !!text && <ReplyFooter text={text} />}
     </div>
   );
 }
@@ -148,11 +146,6 @@ function UserMessage({ message }) {
       <div className="bg-zinc-800 light:bg-slate-100 rounded-[20px] rounded-br-none px-4 py-3 text-sm whitespace-pre-wrap break-words max-w-[85%]">
         {message.content}
       </div>
-      {message.context.length > 0 && (
-        <p className="text-xs text-zinc-500 light:text-slate-500 text-right break-words max-w-[85%]">
-          Using {message.context.join(", ")}
-        </p>
-      )}
     </div>
   );
 }
@@ -217,7 +210,7 @@ function ImagePending({ aborted }) {
   );
 }
 
-function ReplyFooter({ text, metrics }) {
+function ReplyFooter({ text }) {
   const [copied, setCopied] = useState(false);
 
   function copy() {
@@ -236,13 +229,6 @@ function ReplyFooter({ text, metrics }) {
       >
         {copied ? <Check size={14} /> : <Copy size={14} />}
       </button>
-      {typeof metrics?.outputTps === "number" &&
-        typeof metrics?.duration === "number" && (
-          <span>
-            {metrics.outputTps.toFixed(1)} tok/s · {metrics.duration.toFixed(1)}
-            s
-          </span>
-        )}
     </div>
   );
 }

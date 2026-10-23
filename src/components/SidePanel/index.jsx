@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { NotePencil } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  DotsThreeVertical,
+  NotePencil,
+  SignOut,
+} from "@phosphor-icons/react";
 import BrowserExtension from "@/models/browserExtension";
 import ChatComposer from "./ChatComposer";
 import ChatMessage from "./ChatMessage";
@@ -11,7 +16,9 @@ export default function SidePanel() {
   const [connection, setConnection] = useState(null);
   const [workspaces, setWorkspaces] = useState([]);
   const [workspaceId, setWorkspaceId] = useState(null);
-  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
+  // Thread the chat is saved to; made on the first message so empty chats leave nothing behind.
+  const [threadId, setThreadId] = useState(null);
+  const [chatKey, setChatKey] = useState(0);
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
   const abortController = useRef(null);
@@ -68,13 +75,33 @@ export default function SidePanel() {
   function startNewChat() {
     abortController.current?.abort();
     setMessages([]);
-    setSessionId(crypto.randomUUID());
+    setThreadId(null);
+    setChatKey((prev) => prev + 1);
   }
 
   function selectWorkspace(id) {
     setWorkspaceId(id);
     chrome.storage.local.set({ [WORKSPACE_STORAGE_KEY]: id });
     startNewChat();
+  }
+
+  // The key is revoked best-effort; the local connection is always cleared so
+  // an already revoked key cannot leave the panel stuck.
+  async function disconnect() {
+    abortController.current?.abort();
+    await BrowserExtension.disconnect(connection.apiBase, connection.apiKey);
+    await chrome.storage.sync.remove(["apiBase", "apiKey"]);
+    chrome.runtime.sendMessage({ action: "connectionUpdated" });
+  }
+
+  async function createThread() {
+    const { threadId, error } = await BrowserExtension.newThread(
+      connection,
+      workspaceId
+    );
+    if (error) throw new Error(error);
+    setThreadId(threadId);
+    return threadId;
   }
 
   async function sendMessage(message, pages, attachments) {
@@ -95,7 +122,6 @@ export default function SidePanel() {
         id: crypto.randomUUID(),
         role: "user",
         content: message,
-        context: pages.map((p) => p.title),
         attachments,
       },
       {
@@ -111,20 +137,20 @@ export default function SidePanel() {
         routedTo: null,
         sources: [],
         outputs: [],
-        metrics: null,
         error: null,
         done: false,
       },
     ]);
 
     try {
+      const thread = threadId ?? (await createThread());
       await BrowserExtension.streamChat({
         ...connection,
         signal: controller.signal,
         body: {
           workspaceId,
+          threadId: thread,
           message,
-          sessionId,
           context: pages,
           attachments: attachments.map(({ name, mime, contentString }) => ({
             name,
@@ -159,25 +185,28 @@ export default function SidePanel() {
   return (
     <div className="flex flex-col h-screen w-full bg-zinc-900 light:bg-white text-white light:text-slate-900">
       <div className="flex items-center gap-x-2 px-3 py-2.5 border-b border-zinc-800 light:border-slate-200">
-        <select
-          value={workspaceId ?? ""}
-          onChange={(e) => selectWorkspace(Number(e.target.value))}
-          className="flex-1 min-w-0 h-[34px] px-2.5 text-sm rounded-lg outline-none bg-zinc-800 border border-zinc-800 text-zinc-100 light:bg-white light:border-slate-300 light:text-slate-900 focus:border-sky-500 light:focus:border-sky-500"
-        >
-          {workspaces.map((workspace) => (
-            <option key={workspace.id} value={workspace.id}>
-              {workspace.name}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={startNewChat}
-          title="New chat"
-          aria-label="New chat"
-          className="border-none flex items-center justify-center w-[34px] h-[34px] rounded-lg bg-transparent text-zinc-300 light:text-slate-600 hover:bg-zinc-800 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
-        >
+        <div className="relative flex-1 min-w-0">
+          <select
+            value={workspaceId ?? ""}
+            onChange={(e) => selectWorkspace(Number(e.target.value))}
+            className="appearance-none w-full h-[34px] pl-3 pr-9 text-sm rounded-lg outline-none cursor-pointer bg-zinc-800 border border-zinc-800 text-zinc-100 light:bg-white light:border-slate-300 light:text-slate-900 focus:border-sky-500 light:focus:border-sky-500"
+          >
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </select>
+          <CaretDown
+            size={14}
+            weight="bold"
+            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 light:text-slate-500"
+          />
+        </div>
+        <HeaderButton label="New chat" onClick={startNewChat}>
           <NotePencil size={18} />
-        </button>
+        </HeaderButton>
+        <HeaderMenu onDisconnect={disconnect} />
       </div>
 
       <div
@@ -202,7 +231,7 @@ export default function SidePanel() {
       </div>
 
       <ChatComposer
-        key={sessionId}
+        key={chatKey}
         streaming={streaming}
         onSend={sendMessage}
         onStop={() => abortController.current?.abort()}
@@ -227,7 +256,6 @@ function applyChunk(reply, chunk) {
         ...reply,
         content: textOf(chunk) || reply.content,
         sources: Array.isArray(chunk.sources) ? chunk.sources : reply.sources,
-        metrics: isObject(chunk.metrics) ? chunk.metrics : reply.metrics,
       },
       Array.isArray(chunk.outputs) ? chunk.outputs : []
     );
@@ -247,8 +275,6 @@ function applyChunk(reply, chunk) {
     return { ...reply, routedTo: chunk.routedTo };
   if (chunk.type === "fileDownload")
     return addOutputs(reply, [chunk.fileDownload]);
-  if (chunk.type === "usageMetrics")
-    return { ...reply, metrics: chunk.metrics };
   if (chunk.type === "abort") return { ...reply, error: chunk.error };
   if (chunk.type === "done") return { ...reply, done: true };
   return reply;
@@ -285,6 +311,56 @@ function normalizeOutput(output) {
   if (output.type === "imageGenerationCard")
     return { type: "image", ...output.payload };
   return { type: "file", ...(output.payload ?? output) };
+}
+
+function HeaderButton({ label, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="border-none flex items-center justify-center w-[34px] h-[34px] shrink-0 rounded-lg bg-transparent text-zinc-300 light:text-slate-600 hover:bg-zinc-800 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
+    >
+      {children}
+    </button>
+  );
+}
+
+function HeaderMenu({ onDisconnect }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" onMouseDown={(e) => e.stopPropagation()}>
+      <HeaderButton
+        label="More options"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <DotsThreeVertical size={18} weight="bold" />
+      </HeaderButton>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-10 min-w-[150px] p-1 rounded-lg bg-zinc-800 light:bg-white border border-zinc-700 light:border-slate-300 shadow-lg">
+          <button
+            onClick={onDisconnect}
+            className="border-none w-full flex items-center gap-x-2 px-2.5 py-2 rounded-md text-sm bg-transparent text-zinc-200 light:text-slate-700 hover:bg-zinc-700 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
+          >
+            <SignOut size={16} />
+            Disconnect
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PanelMessage({ text }) {

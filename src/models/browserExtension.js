@@ -68,11 +68,34 @@ const BrowserExtension = {
   },
 
   /**
+   * Starts a thread in the workspace; the chat shows up under it in the app.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {number} workspaceId
+   * @returns {Promise<{threadId: number|null, error: string|null}>}
+   */
+  newThread: async function ({ apiBase, apiKey }, workspaceId) {
+    return await fetch(`${apiBase}/browser-extension/threads`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ workspaceId }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not start a thread");
+        return res.json();
+      })
+      .then((data) => ({ threadId: data.thread.id, error: null }))
+      .catch((e) => ({ threadId: null, error: e.message }));
+  },
+
+  /**
    * Sends a chat message and calls onChunk with every streamed event.
    * @param {{
    *  apiBase: string,
    *  apiKey: string,
-   *  body: {workspaceId: number, message: string, sessionId: string, context: {title: string, url: string, content: string}[], attachments: {name: string, mime: string, contentString: string}[]},
+   *  body: {workspaceId: number, threadId: number, message: string, context: {title: string, url: string, content: string}[], attachments: {name: string, mime: string, contentString: string}[]},
    *  signal: AbortSignal,
    *  onChunk: (chunk: object) => void,
    * }} params

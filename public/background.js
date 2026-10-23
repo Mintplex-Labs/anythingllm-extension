@@ -100,6 +100,15 @@ const ContextMenuModel = {
   },
 };
 
+// Connected: the toolbar icon opens the chat panel. Otherwise it opens the
+// popup so the user can connect.
+async function setActionBehavior(connected) {
+  await chrome.action.setPopup({ popup: connected ? "" : "index.html" });
+  await chrome.sidePanel.setPanelBehavior({
+    openPanelOnActionClick: connected,
+  });
+}
+
 const ExtensionModel = {
   async checkApiKeyValidity() {
     const { apiBase, apiKey } = await chrome.storage.sync.get([
@@ -109,6 +118,7 @@ const ExtensionModel = {
 
     if (!apiBase || !apiKey) {
       await ContextMenuModel.remove();
+      await setActionBehavior(false);
       return false;
     }
 
@@ -124,10 +134,12 @@ const ExtensionModel = {
     if (data === null) {
       await chrome.storage.sync.remove(["apiBase", "apiKey"]);
       await ContextMenuModel.remove();
+      await setActionBehavior(false);
       return false;
     }
 
     await ContextMenuModel.create(data.workspaces);
+    await setActionBehavior(true);
     return true;
   },
 
@@ -137,7 +149,10 @@ const ExtensionModel = {
       "apiKey",
     ]);
 
-    if (!apiBase || !apiKey) return await ContextMenuModel.remove();
+    if (!apiBase || !apiKey) {
+      await ContextMenuModel.remove();
+      return await setActionBehavior(false);
+    }
 
     const data = await fetch(`${apiBase}/browser-extension/check`, {
       headers: { Authorization: `Bearer ${apiKey}` },
@@ -148,8 +163,12 @@ const ExtensionModel = {
       })
       .catch(() => null);
 
-    if (data === null) return await ContextMenuModel.remove();
+    if (data === null) {
+      await ContextMenuModel.remove();
+      return await setActionBehavior(false);
+    }
     await ContextMenuModel.create(data.workspaces);
+    await setActionBehavior(true);
     return;
   },
 
@@ -326,6 +345,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   await ExtensionModel.checkApiKeyValidity();
 });
 
+chrome.runtime.onStartup.addListener(async () => {
+  await ExtensionModel.updateWorkspaces();
+});
+
 chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
   if (message.action === "connectionUpdated") return ExtensionModel.checkApiKeyValidity();
 
@@ -336,10 +359,10 @@ chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
     const connection = parseConnectionString(message.connectionString);
     if (!connection) return;
     const requestedBy = sender.origin || new URL(sender.url).origin;
-    chrome.storage.session.set(
-      { pendingConnection: { ...connection, requestedBy } },
-      () => chrome.action.openPopup()
-    );
+    chrome.storage.session
+      .set({ pendingConnection: { ...connection, requestedBy } })
+      .then(() => chrome.action.setPopup({ popup: "index.html" }))
+      .then(() => chrome.action.openPopup());
     return;
   }
 });
@@ -458,8 +481,17 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync" && (changes.apiBase || changes.apiKey)) {
     if (!changes.apiBase?.newValue || !changes.apiKey?.newValue) {
       ContextMenuModel.remove();
+      setActionBehavior(false);
     }
   }
+  // The popup was shown for a pending connection; once it is handled the
+  // toolbar icon goes back to opening the chat panel when connected.
+  if (
+    namespace === "session" &&
+    changes.pendingConnection &&
+    !changes.pendingConnection.newValue
+  )
+    ExtensionModel.updateWorkspaces();
 });
 
 // Update workspaces periodically
