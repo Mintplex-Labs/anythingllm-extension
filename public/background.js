@@ -100,18 +100,6 @@ const ContextMenuModel = {
   },
 };
 
-// Connected: the toolbar icon opens the chat panel. Otherwise, or while a
-// page's connection request waits for approval, it opens the popup.
-async function setActionBehavior(connected) {
-  const { pendingConnection } =
-    await chrome.storage.session.get("pendingConnection");
-  const openPanel = connected && !pendingConnection;
-  await chrome.action.setPopup({ popup: openPanel ? "" : "index.html" });
-  await chrome.sidePanel.setPanelBehavior({
-    openPanelOnActionClick: openPanel,
-  });
-}
-
 const ExtensionModel = {
   async checkApiKeyValidity() {
     const { apiBase, apiKey } = await chrome.storage.sync.get([
@@ -121,7 +109,6 @@ const ExtensionModel = {
 
     if (!apiBase || !apiKey) {
       await ContextMenuModel.remove();
-      await setActionBehavior(false);
       return false;
     }
 
@@ -137,12 +124,10 @@ const ExtensionModel = {
     if (data === null) {
       await chrome.storage.sync.remove(["apiBase", "apiKey"]);
       await ContextMenuModel.remove();
-      await setActionBehavior(false);
       return false;
     }
 
     await ContextMenuModel.create(data.workspaces);
-    await setActionBehavior(true);
     return true;
   },
 
@@ -152,10 +137,7 @@ const ExtensionModel = {
       "apiKey",
     ]);
 
-    if (!apiBase || !apiKey) {
-      await ContextMenuModel.remove();
-      return await setActionBehavior(false);
-    }
+    if (!apiBase || !apiKey) return await ContextMenuModel.remove();
 
     const data = await fetch(`${apiBase}/browser-extension/check`, {
       headers: { Authorization: `Bearer ${apiKey}` },
@@ -166,12 +148,8 @@ const ExtensionModel = {
       })
       .catch(() => null);
 
-    if (data === null) {
-      await ContextMenuModel.remove();
-      return await setActionBehavior(false);
-    }
+    if (data === null) return await ContextMenuModel.remove();
     await ContextMenuModel.create(data.workspaces);
-    await setActionBehavior(true);
     return;
   },
 
@@ -362,10 +340,11 @@ chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
     const connection = parseConnectionString(message.connectionString);
     if (!connection) return;
     const requestedBy = sender.origin || new URL(sender.url).origin;
-    chrome.storage.session
-      .set({ pendingConnection: { ...connection, requestedBy } })
-      .then(() => chrome.action.setPopup({ popup: "index.html" }))
-      .then(() => chrome.action.openPopup());
+    // sidePanel.open must run before any await to keep the user gesture.
+    chrome.sidePanel.open({ tabId: sender.tab.id });
+    chrome.storage.session.set({
+      pendingConnection: { ...connection, requestedBy },
+    });
     return;
   }
 });
@@ -484,18 +463,12 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync" && (changes.apiBase || changes.apiKey)) {
     if (!changes.apiBase?.newValue || !changes.apiKey?.newValue) {
       ContextMenuModel.remove();
-      setActionBehavior(false);
     }
   }
-  // The popup was shown for a pending connection; once it is handled the
-  // toolbar icon goes back to opening the chat panel when connected.
-  if (
-    namespace === "session" &&
-    changes.pendingConnection &&
-    !changes.pendingConnection.newValue
-  )
-    ExtensionModel.updateWorkspaces();
 });
+
+// The toolbar icon always opens the chat panel; connecting happens in there.
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
 // Update workspaces periodically
 chrome.alarms.create("updateWorkspaces", { periodInMinutes: 1 });

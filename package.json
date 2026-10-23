@@ -1,6 +1,6 @@
 {
   "name": "anything-llm-extension",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch src --watch public -e js,jsx,css,html --exec \"yarn dev:build\"",
@@ -14,7 +14,8 @@
     "markdown-it": "14.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "2.12.7"
+    "recharts": "2.12.7",
+    "semver": "7.8.5"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

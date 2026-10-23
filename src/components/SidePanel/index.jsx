@@ -2,18 +2,29 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   CaretDown,
   DotsThreeVertical,
+  FolderSimplePlus,
   NotePencil,
   SignOut,
+  WifiSlash,
 } from "@phosphor-icons/react";
 import BrowserExtension from "@/models/browserExtension";
+import { isServerOutdated, updateUrl } from "@/utils/serverVersion";
 import ChatComposer from "./ChatComposer";
 import ChatMessage from "./ChatMessage";
+import ConnectScreen from "./ConnectScreen";
+import PendingConnectionScreen from "./PendingConnectionScreen";
+import Screen, { PRIMARY_BUTTON, TEXT_BUTTON } from "./Screen";
+import UpdateRequired from "./UpdateRequired";
 
 const WORKSPACE_STORAGE_KEY = "chatWorkspaceId";
 
 export default function SidePanel() {
   const [status, setStatus] = useState("loading");
   const [connection, setConnection] = useState(null);
+  // Why the last connection ended, shown on the connect screen.
+  const [notice, setNotice] = useState(null);
+  // A connection string an AnythingLLM page handed over, waiting for approval.
+  const [pendingConnection, setPendingConnection] = useState(null);
   const [workspaces, setWorkspaces] = useState([]);
   const [workspaceId, setWorkspaceId] = useState(null);
   // Thread the chat is saved to; made on the first message so empty chats leave nothing behind.
@@ -29,7 +40,12 @@ export default function SidePanel() {
 
   useEffect(() => {
     loadWorkspaces();
+    chrome.storage.session
+      .get("pendingConnection")
+      .then((stored) => setPendingConnection(stored.pendingConnection ?? null));
     const onStorageChanged = (changes, area) => {
+      if (area === "session" && changes.pendingConnection)
+        return setPendingConnection(changes.pendingConnection.newValue ?? null);
       if (area !== "sync" || !(changes.apiBase || changes.apiKey)) return;
       // A chat belongs to the instance it was started on.
       startNewChat();
@@ -55,16 +71,26 @@ export default function SidePanel() {
       "apiBase",
       "apiKey",
     ]);
-    if (!apiBase || !apiKey) return setStatus("notConnected");
+    if (!apiBase || !apiKey) {
+      setConnection(null);
+      return setStatus("notConnected");
+    }
+    setConnection({ apiBase, apiKey });
 
-    const [{ workspaces, error }, stored] = await Promise.all([
-      BrowserExtension.workspaces(apiBase, apiKey),
-      chrome.storage.local.get(WORKSPACE_STORAGE_KEY),
-    ]);
+    const [{ workspaces, revoked, error }, { version }, stored] =
+      await Promise.all([
+        BrowserExtension.workspaces(apiBase, apiKey),
+        BrowserExtension.serverVersion(apiBase),
+        chrome.storage.local.get(WORKSPACE_STORAGE_KEY),
+      ]);
+    if (revoked)
+      return forgetConnection(
+        "This connection was removed in AnythingLLM. Connect again to keep chatting."
+      );
     if (error) return setStatus("offline");
+    if (isServerOutdated(version)) return setStatus("outdated");
 
     const savedId = stored[WORKSPACE_STORAGE_KEY];
-    setConnection({ apiBase, apiKey });
     setWorkspaces(workspaces);
     setWorkspaceId(
       workspaces.some((workspace) => workspace.id === savedId)
@@ -87,13 +113,50 @@ export default function SidePanel() {
     startNewChat();
   }
 
+  /**
+   * Saves a connection once AnythingLLM accepts it; the storage change reloads the panel.
+   * @param {string} connectionString - `apiBase|apiKey`
+   * @returns {Promise<string|null>} an error message, or null once saved
+   */
+  async function connect(connectionString) {
+    const [apiBase, apiKey] = connectionString.split("|");
+    if (!apiBase || !apiKey)
+      return "That doesn't look like a connection string.";
+    const { online } = await BrowserExtension.checkOnline(apiBase);
+    if (!online) return "Could not reach AnythingLLM at that address.";
+    const { response } = await BrowserExtension.checkApiKey(apiBase, apiKey);
+    if (!response.ok) return "AnythingLLM rejected this connection string.";
+    setNotice(null);
+    await chrome.storage.sync.set({ apiBase, apiKey });
+    chrome.runtime.sendMessage({ action: "connectionUpdated" });
+    return null;
+  }
+
+  // Clears the saved connection; the storage change reloads the panel.
+  async function forgetConnection(reason = null) {
+    setNotice(reason);
+    await chrome.storage.sync.remove(["apiBase", "apiKey"]);
+    chrome.runtime.sendMessage({ action: "connectionUpdated" });
+  }
+
   // The key is revoked best-effort; the local connection is always cleared so
   // an already revoked key cannot leave the panel stuck.
   async function disconnect() {
     abortController.current?.abort();
     await BrowserExtension.disconnect(connection.apiBase, connection.apiKey);
-    await chrome.storage.sync.remove(["apiBase", "apiKey"]);
-    chrome.runtime.sendMessage({ action: "connectionUpdated" });
+    await forgetConnection();
+  }
+
+  function clearPendingConnection() {
+    return chrome.storage.session.remove("pendingConnection");
+  }
+
+  // The request stays until it connects so a failure can be shown and retried.
+  async function approvePendingConnection() {
+    const { apiBase, apiKey } = pendingConnection;
+    const failure = await connect(`${apiBase}|${apiKey}`);
+    if (!failure) await clearPendingConnection();
+    return failure;
   }
 
   async function createThread(signal) {
@@ -172,21 +235,55 @@ export default function SidePanel() {
     if (abortController.current === controller) setStreaming(false);
   }
 
+  if (pendingConnection)
+    return (
+      <PendingConnectionScreen
+        request={pendingConnection}
+        connected={!!connection}
+        onApprove={approvePendingConnection}
+        onReject={clearPendingConnection}
+      />
+    );
   if (status === "loading") return null;
   if (status === "notConnected")
-    return (
-      <PanelMessage text="Connect the extension to AnythingLLM from the toolbar popup to start chatting." />
-    );
+    return <ConnectScreen onConnect={connect} notice={notice} />;
   if (status === "offline")
     return (
-      <PanelMessage
-        text="Could not reach AnythingLLM. Make sure your instance is running and the extension is connected."
+      <Screen
+        icon={<WifiSlash size={36} weight="fill" />}
+        title="Can't reach AnythingLLM"
+        description="Make sure your instance is running, then try again."
+      >
+        <button onClick={loadWorkspaces} className={PRIMARY_BUTTON}>
+          Try again
+        </button>
+        <button onClick={disconnect} className={TEXT_BUTTON}>
+          Disconnect
+        </button>
+      </Screen>
+    );
+  if (status === "outdated")
+    return (
+      <UpdateRequired
+        updateUrl={updateUrl(connection.apiBase)}
         onRetry={loadWorkspaces}
+        onDisconnect={disconnect}
       />
     );
   if (workspaces.length === 0)
     return (
-      <PanelMessage text="Create a workspace in AnythingLLM to start chatting." />
+      <Screen
+        icon={<FolderSimplePlus size={36} weight="fill" />}
+        title="No workspaces yet"
+        description="Create a workspace in AnythingLLM to start chatting."
+      >
+        <button onClick={loadWorkspaces} className={PRIMARY_BUTTON}>
+          Refresh
+        </button>
+        <button onClick={disconnect} className={TEXT_BUTTON}>
+          Disconnect
+        </button>
+      </Screen>
     );
 
   return (
@@ -368,29 +465,6 @@ function HeaderMenu({ onDisconnect }) {
             Disconnect
           </button>
         </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * @param {Object} props
- * @param {string} props.text
- * @param {() => void} [props.onRetry] - shows a Retry button when given
- */
-function PanelMessage({ text, onRetry = null }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-y-4 h-screen w-full bg-zinc-900 light:bg-white p-6">
-      <p className="text-zinc-400 light:text-slate-600 text-sm text-center">
-        {text}
-      </p>
-      {!!onRetry && (
-        <button
-          onClick={onRetry}
-          className="border-none h-[34px] px-4 rounded-lg text-sm font-medium bg-zinc-50 light:bg-slate-900 text-zinc-950 light:text-white hover:opacity-80"
-        >
-          Retry
-        </button>
       )}
     </div>
   );

@@ -28,6 +28,18 @@ const BrowserExtension = {
       });
   },
 
+  /**
+   * Reads the version the connected AnythingLLM reports.
+   * @param {string} apiBase
+   * @returns {Promise<{version: string|null, error: string|null}>} error only when unreachable
+   */
+  serverVersion: async function (apiBase) {
+    return await fetch(`${apiBase}/utils/metrics`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data) => ({ version: data.appVersion ?? null, error: null }))
+      .catch((e) => ({ version: null, error: e.message }));
+  },
+
   fetchLogo: async function (apiBase) {
     try {
       const theme = isLightMode() ? "light" : "dark";
@@ -50,21 +62,27 @@ const BrowserExtension = {
   },
 
   /**
-   * Lists the workspaces the connected API key can access.
+   * Lists the workspaces the connected API key can access. Uses /check so the
+   * key is validated the same way on every AnythingLLM version.
    * @param {string} apiBase
    * @param {string} apiKey
-   * @returns {Promise<{workspaces: {id: number, name: string}[], error: string|null}>}
+   * @returns {Promise<{workspaces: {id: number, name: string}[], revoked: boolean, error: string|null}>} revoked when the key no longer exists in AnythingLLM
    */
   workspaces: async function (apiBase, apiKey) {
-    return await fetch(`${apiBase}/browser-extension/workspaces`, {
+    return await fetch(`${apiBase}/browser-extension/check`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Bad response to /workspaces");
+        if (res.status === 403) return { revoked: true };
+        if (!res.ok) throw new Error("Bad response to /check");
         return res.json();
       })
-      .then((data) => ({ workspaces: data.workspaces, error: null }))
-      .catch((e) => ({ workspaces: [], error: e.message }));
+      .then((data) => ({
+        workspaces: data.workspaces ?? [],
+        revoked: !!data.revoked,
+        error: null,
+      }))
+      .catch((e) => ({ workspaces: [], revoked: false, error: e.message }));
   },
 
   /**
