@@ -1,5 +1,3 @@
-# AnythingLLM Chrome Extension
-
 <p align="center">
   <img src="src/media/anything-llm.png" alt="AnythingLLM Chrome Extension logo" width="200">
 </p>
