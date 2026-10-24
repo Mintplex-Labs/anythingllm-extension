@@ -6,8 +6,13 @@ import {
   isReadable,
   readTabText,
 } from "@/utils/tabs";
-import { attachmentProblem, fileToAttachment } from "@/utils/attachments";
+import {
+  attachmentProblem,
+  fileToAttachment,
+  imageFileFromUrl,
+} from "@/utils/attachments";
 import useFileDrop from "@/hooks/useFileDrop";
+import useSessionHandoff from "@/hooks/useSessionHandoff";
 import ContextCard from "../ContextCard";
 import AttachmentCard from "../AttachmentCard";
 import MicButton from "./MicButton";
@@ -40,8 +45,6 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   const [highlighted, setHighlighted] = useState(0);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
-  const onSendRef = useRef(onSend);
-  onSendRef.current = onSend;
   const dragging = useFileDrop(addFiles);
 
   const mention = text.match(MENTION_PATTERN);
@@ -76,30 +79,18 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
     };
   }, []);
 
-  useEffect(() => {
-    const takeSelection = (pendingSelection) => {
-      if (!pendingSelection) return;
-      chrome.storage.session.remove("pendingSelection");
-      // Quick actions from the context menu carry their own prompt and send right away.
-      if (pendingSelection.prompt)
-        return onSendRef.current(
-          pendingSelection.prompt,
-          [selectionPage(pendingSelection)],
-          []
-        );
-      setSelection(pendingSelection);
-    };
-    chrome.storage.session
-      .get("pendingSelection")
-      .then(({ pendingSelection }) => takeSelection(pendingSelection));
-
-    const onStorageChanged = (changes, area) => {
-      if (area === "session" && changes.pendingSelection)
-        takeSelection(changes.pendingSelection.newValue);
-    };
-    chrome.storage.onChanged.addListener(onStorageChanged);
-    return () => chrome.storage.onChanged.removeListener(onStorageChanged);
-  }, []);
+  useSessionHandoff("pendingSelection", (pendingSelection) => {
+    // Quick actions from the context menu carry their own prompt and send right away.
+    if (pendingSelection.prompt)
+      return onSend(
+        pendingSelection.prompt,
+        [selectionPage(pendingSelection)],
+        []
+      );
+    setSelection(pendingSelection);
+  });
+  useSessionHandoff("pendingPage", ({ tabId }) => attachPage(tabId));
+  useSessionHandoff("pendingImage", ({ srcUrl }) => addImageFromUrl(srcUrl));
 
   useEffect(() => {
     if (!notice) return;
@@ -133,6 +124,26 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
     );
   }
 
+  // "Chat with page" from the context menu: attach that tab even if the
+  // current page card was removed or a selection is standing in for it.
+  async function attachPage(tabId) {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!isReadable(tab)) return setNotice("AnythingLLM can't read this page.");
+    setActiveTabDismissed(false);
+    setMentionedTabs((prev) =>
+      prev.some((t) => t.id === tab.id) || prev.length >= MAX_PAGES
+        ? prev
+        : [...prev, tab]
+    );
+    textareaRef.current?.focus();
+  }
+
+  async function addImageFromUrl(srcUrl) {
+    const file = await imageFileFromUrl(srcUrl);
+    if (!file) return setNotice("Couldn't load that image.");
+    addFiles([file]);
+  }
+
   function removeTab(tab) {
     if (tab.id === activeTab?.id) setActiveTabDismissed(true);
     setMentionedTabs((prev) => prev.filter((t) => t.id !== tab.id));
@@ -142,8 +153,15 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
     const problems = files.map(attachmentProblem);
     setNotice(problems.find(Boolean) ?? null);
     const accepted = files.filter((_, i) => !problems[i]);
-    const added = await Promise.all(accepted.map(fileToAttachment));
-    setAttachments((prev) => [...prev, ...added]);
+    const added = await Promise.all(
+      accepted.map((file) =>
+        fileToAttachment(file).catch(() => {
+          setNotice(`Couldn't read ${file.name}.`);
+          return null;
+        })
+      )
+    );
+    setAttachments((prev) => [...prev, ...added.filter(Boolean)]);
     textareaRef.current?.focus();
   }
 

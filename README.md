@@ -83,6 +83,6 @@ This project is [MIT](../LICENSE) licensed.
 
 ## Side panel chat
 
-Click the toolbar icon or press `Alt+Shift+L` to open the panel. Connecting, disconnecting (three-dot menu), and connection problems are all handled in the panel. It chats with the selected workspace and sends the current page as context. Each chat is saved as a thread in that workspace, so it can be picked up later inside AnythingLLM. Type `@` to attach other open tabs, drop or paste files to attach them, and use the microphone button to dictate. Right-click highlighted text for "Ask AnythingLLM about this" or a quick action (Summarize, Explain, Rewrite, Fix spelling & grammar).
+Click the toolbar icon or press `Alt+Shift+L` to open the panel. Connecting, disconnecting (three-dot menu), and connection problems are all handled in the panel. It chats with the selected workspace and sends the current page as context. Each chat is saved as a thread in that workspace, so it can be picked up later inside AnythingLLM. Type `@` to attach other open tabs, drop or paste files to attach them, and use the microphone button to dictate. Right-click highlighted text for "Ask AnythingLLM about this" or a quick action (Summarize, Explain, Rewrite, Fix spelling & grammar). Right-click a page for "Chat with page", or an image for "Add image to chat".
 
 Chrome cannot show the microphone prompt inside a side panel, so the first use of the microphone opens a small tab that asks for permission once.

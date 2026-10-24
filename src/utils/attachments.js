@@ -1,6 +1,15 @@
 // Non-image files use this mime so the server parses them to text first.
 const DOCUMENT_MIME = "application/anythingllm-document";
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+// Image types every vision provider accepts; other images are converted to PNG.
+const MODEL_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+];
+// Converted images are scaled down to keep requests within provider limits.
+const MAX_CONVERTED_IMAGE_SIDE = 2048;
 // Everything the collector can turn into text.
 const DOCUMENT_EXTENSIONS = [
   "txt",
@@ -42,9 +51,11 @@ const DOCUMENT_EXTENSIONS = [
 /**
  * Reads a dropped, pasted or picked file into the attachment shape the chat endpoint accepts.
  * @param {File} file
- * @returns {Promise<Attachment>}
+ * @returns {Promise<Attachment>} rejects when an image cannot be decoded
  */
-export function fileToAttachment(file) {
+export async function fileToAttachment(file) {
+  if (isImageFile(file) && !MODEL_IMAGE_TYPES.includes(file.type))
+    file = await imageToPng(file);
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () =>
@@ -57,6 +68,37 @@ export function fileToAttachment(file) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Redraws an image the model cannot take, like SVG or AVIF, as a PNG.
+ * @param {File} file
+ * @returns {Promise<File>}
+ */
+async function imageToPng(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+    const width = image.naturalWidth || MAX_CONVERTED_IMAGE_SIDE;
+    const height = image.naturalHeight || MAX_CONVERTED_IMAGE_SIDE;
+    const scale = Math.min(
+      1,
+      MAX_CONVERTED_IMAGE_SIDE / Math.max(width, height)
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/png")
+    );
+    const name = `${file.name.replace(/\.[^.]+$/, "")}.png`;
+    return new File([blob], name, { type: "image/png" });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
@@ -83,6 +125,24 @@ export async function openAttachment(attachment) {
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank");
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Downloads an image from a page so it can be attached like a dropped file.
+ * @param {string} url - http(s) or data URL of the image
+ * @returns {Promise<File|null>} null when it cannot be loaded or is not an image
+ */
+export async function imageFileFromUrl(url) {
+  const blob = await fetch(url, { credentials: "include" })
+    .then((res) => (res.ok ? res.blob() : null))
+    .catch(() => null);
+  if (!blob || !isImageFile(blob)) return null;
+  const extension = blob.type.split("/")[1].split("+")[0];
+  const base = url.startsWith("data:")
+    ? "image"
+    : decodeURIComponent(new URL(url).pathname.split("/").pop() || "image");
+  const name = base.includes(".") ? base : `${base}.${extension}`;
+  return new File([blob], name, { type: blob.type });
 }
 
 /**

@@ -25,6 +25,16 @@ const ContextMenuModel = {
     await chrome.contextMenus.removeAll();
 
     chrome.contextMenus.create({
+      id: "chatWithPage",
+      title: "Chat with page",
+      contexts: ["page"],
+    });
+    chrome.contextMenus.create({
+      id: "addImageToChat",
+      title: "Add image to chat",
+      contexts: ["image"],
+    });
+    chrome.contextMenus.create({
       id: "askAnythingLLM",
       title: "Ask AnythingLLM about this",
       contexts: ["selection"],
@@ -391,11 +401,28 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     const action = QUICK_ACTIONS[info.menuItemId.replace("quickAction-", "")];
     chrome.storage.session.set({
       pendingSelection: {
+        id: crypto.randomUUID(),
         text: info.selectionText,
         title: tab.title,
         url: tab.url,
         prompt: action?.prompt ?? null,
       },
+    });
+    return;
+  }
+
+  if (info.menuItemId === "chatWithPage") {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+    chrome.storage.session.set({
+      pendingPage: { id: crypto.randomUUID(), tabId: tab.id },
+    });
+    return;
+  }
+
+  if (info.menuItemId === "addImageToChat") {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+    chrome.storage.session.set({
+      pendingImage: { id: crypto.randomUUID(), srcUrl: info.srcUrl },
     });
     return;
   }
