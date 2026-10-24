@@ -16,6 +16,7 @@ import Chart from "./Chart";
 import ScheduledJob from "./ScheduledJob";
 import Sources from "./Sources";
 import Outputs from "./Outputs";
+import Metrics from "./Metrics";
 
 const MARKDOWN_CLASSES =
   "text-sm leading-relaxed break-words text-white light:text-slate-900 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 [&_li]:mb-1 [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_a]:text-sky-400 light:[&_a]:text-sky-600 [&_a]:underline [&_pre]:bg-zinc-800 light:[&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-2 [&_code]:font-mono [&_code]:text-xs";
@@ -80,13 +81,18 @@ export default function ChatMessage({ message, connection }) {
       {message.jobs.map((job) => (
         <ScheduledJob key={job.jobId} job={job} connection={connection} />
       ))}
-      <Sources sources={message.sources} />
+      {message.done && (
+        <ReplyFooter
+          text={text}
+          sources={message.sources}
+          metrics={message.metrics}
+        />
+      )}
       {!!message.error && (
         <div className="bg-red-500/10 border border-red-500/50 text-red-400 light:text-red-600 p-2.5 rounded-lg text-sm">
           {message.error}
         </div>
       )}
-      {message.done && !!text && <ReplyFooter text={text} />}
     </div>
   );
 }
@@ -212,7 +218,28 @@ function ImagePendingFrame({ background, children }) {
   );
 }
 
-function ReplyFooter({ text }) {
+function ReplyFooter({ text, sources, metrics }) {
+  if (!text && sources.length === 0) return null;
+  if (sources.length === 0)
+    return (
+      <div className="flex items-center gap-x-1">
+        <Metrics metrics={metrics} />
+        <CopyButton text={text} />
+      </div>
+    );
+
+  return (
+    <div className="flex flex-col gap-y-1">
+      <div className="flex items-center gap-x-0.5">
+        <Sources sources={sources} />
+        {!!text && <CopyButton text={text} />}
+      </div>
+      <Metrics metrics={metrics} />
+    </div>
+  );
+}
+
+function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
 
   function copy() {
@@ -222,15 +249,13 @@ function ReplyFooter({ text }) {
   }
 
   return (
-    <div className="flex items-center gap-x-2 opacity-0 group-hover:opacity-100 text-xs text-zinc-500 light:text-slate-500">
-      <button
-        onClick={copy}
-        title="Copy"
-        aria-label="Copy"
-        className="border-none bg-transparent flex items-center justify-center w-6 h-6 rounded-md hover:bg-zinc-800 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-      </button>
-    </div>
+    <button
+      onClick={copy}
+      title="Copy"
+      aria-label="Copy"
+      className="border-none bg-transparent flex items-center justify-center shrink-0 w-6 h-6 rounded-md text-zinc-500 light:text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
+    >
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </button>
   );
 }

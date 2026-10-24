@@ -203,6 +203,7 @@ export default function SidePanel() {
         routedTo: null,
         sources: [],
         outputs: [],
+        metrics: null,
         error: null,
         done: false,
       },
@@ -360,6 +361,7 @@ function applyChunk(reply, chunk) {
         ...reply,
         content: textOf(chunk) || reply.content,
         sources: Array.isArray(chunk.sources) ? chunk.sources : reply.sources,
+        metrics: chunk.metrics ?? reply.metrics,
       },
       Array.isArray(chunk.outputs) ? chunk.outputs : []
     );
