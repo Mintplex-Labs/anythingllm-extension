@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AnythingLLM Browser Companion",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Bring AnythingLLM directly into your browser to curate and collect content on the web directly into your AnythingLLM workspaces.",
   "icons": {
     "16": "icon16.png",
@@ -14,16 +14,28 @@
     "activeTab",
     "storage",
     "notifications",
-    "alarms"
+    "alarms",
+    "sidePanel",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Open AnythingLLM chat"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "index.html",
     "default_icon": {
       "16": "icon16.png",
       "32": "icon32.png",

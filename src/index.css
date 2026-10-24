@@ -2,14 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "plus-jakarta-sans";
+  src: url("/fonts/PlusJakartaSans.ttf");
+  font-display: swap;
+}
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "plus-jakarta-sans", system-ui, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #18181b;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -17,7 +23,15 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    background-color: #ffffff;
+  }
+}
+
+/* Chrome gives extension pages a default body font, so set it here too. */
 body {
+  font-family: inherit;
   margin: 0;
   display: flex;
   place-items: center;

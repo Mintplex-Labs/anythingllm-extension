@@ -61,8 +61,8 @@ The built extension will be in the `dist` folder.
 
 ## Usage
 
-1. Click on the AnythingLLM extension icon in your Chrome toolbar.
-2. Enter your AnythingLLM browser extension API key to connect to your instance (or create the API key inside AnythingLLM and have it automatically register to the extension).
+1. Click the AnythingLLM extension icon in your Chrome toolbar (or press `Alt+Shift+L`) to open the side panel.
+2. Paste the connection string from Settings > Tools > Browser Extension in AnythingLLM, or click Connect there and approve the request in the panel.
 3. Right-click on selected text or anywhere on a webpage to see AnythingLLM options.
 4. Choose to save selected text or the entire page to AnythingLLM.
 
@@ -78,3 +78,9 @@ Contributions are welcome! Feel free to submit a PR.
 
 Copyright © 2024 [Mintplex Labs](https://github.com/Mintplex-Labs). <br />
 This project is [MIT](../LICENSE) licensed.
+
+## Side panel chat
+
+Click the toolbar icon or press `Alt+Shift+L` to open the panel. Connecting, disconnecting (three-dot menu), and connection problems are all handled in the panel. It chats with the selected workspace and sends the current page as context. Each chat is saved as a thread in that workspace, so it can be picked up later inside AnythingLLM. Type `@` to attach other open tabs, drop or paste files to attach them, and use the microphone button to dictate. Right-click highlighted text for "Ask AnythingLLM about this" or a quick action (Summarize, Explain, Rewrite, Fix spelling & grammar). Right-click a page for "Chat with page", or an image for "Add image to chat".
+
+Chrome cannot show the microphone prompt inside a side panel, so the first use of the microphone opens a small tab that asks for permission once.

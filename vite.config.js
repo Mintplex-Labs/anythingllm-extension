@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: "index.html"
+        sidepanel: "sidepanel.html"
       }
     },
     outDir: "dist"

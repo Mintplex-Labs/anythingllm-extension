@@ -1,3 +1,29 @@
+import i18n from "@/i18n";
+import { isLightMode } from "@/utils/theme";
+
+// AnythingLLM answered 403: the API key was deleted there.
+export class RevokedKeyError extends Error {
+  constructor() {
+    super(i18n.t("errors.revoked"));
+    this.name = "RevokedKeyError";
+  }
+}
+
+/**
+ * A 403 means either the key was deleted or the workspace is out of reach for
+ * it, so /check decides which one before the panel drops the connection.
+ * @param {string} apiBase
+ * @param {string} apiKey
+ * @param {Response} response - the 403 response
+ * @returns {Promise<Error>}
+ */
+async function forbiddenError(apiBase, apiKey, response) {
+  const { revoked } = await BrowserExtension.workspaces(apiBase, apiKey);
+  if (revoked) return new RevokedKeyError();
+  const { error } = await response.json().catch(() => ({}));
+  return new Error(error || i18n.t("errors.refused"));
+}
+
 const BrowserExtension = {
   checkApiKey: async function (apiBase, apiKey) {
     return await fetch(`${apiBase}/browser-extension/check`, {
@@ -26,9 +52,22 @@ const BrowserExtension = {
       });
   },
 
+  /**
+   * Reads the version the connected AnythingLLM reports.
+   * @param {string} apiBase
+   * @returns {Promise<{version: string|null, error: string|null}>} error only when unreachable
+   */
+  serverVersion: async function (apiBase) {
+    return await fetch(`${apiBase}/utils/metrics`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data) => ({ version: data.appVersion ?? null, error: null }))
+      .catch((e) => ({ version: null, error: e.message }));
+  },
+
   fetchLogo: async function (apiBase) {
     try {
-      const response = await fetch(`${apiBase}/system/logo`, {
+      const theme = isLightMode() ? "light" : "dark";
+      const response = await fetch(`${apiBase}/system/logo?theme=${theme}`, {
         method: "GET",
         cache: "no-cache",
       });
@@ -46,6 +85,223 @@ const BrowserExtension = {
     }
   },
 
+  /**
+   * Lists the workspaces the connected API key can access. Uses /check so the
+   * key is validated the same way on every AnythingLLM version.
+   * @param {string} apiBase
+   * @param {string} apiKey
+   * @returns {Promise<{workspaces: {id: number, name: string}[], revoked: boolean, error: string|null}>} revoked when the key no longer exists in AnythingLLM
+   */
+  workspaces: async function (apiBase, apiKey) {
+    return await fetch(`${apiBase}/browser-extension/check`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+      .then((res) => {
+        if (res.status === 403) return { revoked: true };
+        if (!res.ok) throw new Error("Bad response to /check");
+        return res.json();
+      })
+      .then((data) => ({
+        workspaces: data.workspaces ?? [],
+        revoked: !!data.revoked,
+        error: null,
+      }))
+      .catch((e) => ({ workspaces: [], revoked: false, error: e.message }));
+  },
+
+  /**
+   * Starts a thread in the workspace; the chat shows up under it in the app.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {number} workspaceId
+   * @returns {Promise<{threadId: number|null, error: string|null}>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
+   */
+  newThread: async function ({ apiBase, apiKey }, workspaceId) {
+    return await fetch(`${apiBase}/browser-extension/threads`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ workspaceId }),
+    })
+      .then(async (res) => {
+        if (res.status === 403)
+          throw await forbiddenError(apiBase, apiKey, res);
+        if (!res.ok) throw new Error(i18n.t("errors.startThread"));
+        return res.json();
+      })
+      .then((data) => ({ threadId: data.thread.id, error: null }))
+      .catch((e) => {
+        if (e instanceof RevokedKeyError) throw e;
+        return { threadId: null, error: e.message };
+      });
+  },
+
+  /**
+   * Lists the threads this key's user has in a workspace, oldest first.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {number} workspaceId
+   * @returns {Promise<{threads: {id: number, name: string}[], error: string|null}>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
+   */
+  threads: async function ({ apiBase, apiKey }, workspaceId) {
+    return await fetch(
+      `${apiBase}/browser-extension/threads?workspaceId=${Number(workspaceId)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    )
+      .then(async (res) => {
+        if (res.status === 403)
+          throw await forbiddenError(apiBase, apiKey, res);
+        if (!res.ok) throw new Error(i18n.t("errors.loadThreads"));
+        return res.json();
+      })
+      .then((data) => ({ threads: data.threads ?? [], error: null }))
+      .catch((e) => {
+        if (e instanceof RevokedKeyError) throw e;
+        return { threads: [], error: e.message };
+      });
+  },
+
+  /**
+   * Loads the messages saved in a thread, in the shape the app's chat history uses.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {number} threadId
+   * @returns {Promise<{history: object[], error: string|null}>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
+   */
+  threadHistory: async function ({ apiBase, apiKey }, threadId) {
+    return await fetch(
+      `${apiBase}/browser-extension/threads/${Number(threadId)}/chats`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    )
+      .then(async (res) => {
+        if (res.status === 403)
+          throw await forbiddenError(apiBase, apiKey, res);
+        if (!res.ok) throw new Error(i18n.t("errors.loadChat"));
+        return res.json();
+      })
+      .then((data) => ({ history: data.history ?? [], error: null }))
+      .catch((e) => {
+        if (e instanceof RevokedKeyError) throw e;
+        return { history: [], error: e.message };
+      });
+  },
+
+  /**
+   * Sends a chat message and calls onChunk with every streamed event.
+   * @param {{
+   *  apiBase: string,
+   *  apiKey: string,
+   *  body: {workspaceId: number, threadId: number, message: string, context: {title: string, url: string, content: string}[], attachments: {name: string, mime: string, contentString: string}[]},
+   *  signal: AbortSignal,
+   *  onChunk: (chunk: object) => void,
+   * }} params
+   * @returns {Promise<void>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
+   */
+  streamChat: async function ({ apiBase, apiKey, body, signal, onChunk }) {
+    const response = await fetch(`${apiBase}/browser-extension/stream-chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (response.status === 403)
+      throw await forbiddenError(apiBase, apiKey, response);
+    if (!response.ok) {
+      const { error } = await response.json().catch(() => ({}));
+      throw new Error(error || i18n.t("errors.sendMessage"));
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop();
+      for (const event of events) {
+        if (!event.startsWith("data: ")) continue;
+        try {
+          onChunk(JSON.parse(event.slice(6)));
+        } catch {}
+      }
+    }
+  },
+
+  /**
+   * Fetches an image or file an agent generated during a chat.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {{type: "image"|"file", storageFilename: string}} output
+   * @returns {Promise<{url: string|null, error: string|null}>} url is an object URL the caller owns
+   */
+  generatedFile: async function ({ apiBase, apiKey }, output) {
+    const route =
+      output.type === "image" ? "generated-images" : "generated-files";
+    const filename = encodeURIComponent(output.storageFilename);
+    return await fetch(`${apiBase}/browser-extension/${route}/${filename}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(i18n.t("errors.loadFile"));
+        return res.blob();
+      })
+      .then((blob) => ({ url: URL.createObjectURL(blob), error: null }))
+      .catch((e) => ({ url: null, error: e.message }));
+  },
+
+  /**
+   * Answers a question the agent asked mid-stream: a tool approval
+   * ({approved}), a clarifying question ({skipped, answers}) or a hold.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {string} requestId
+   * @param {object} reply
+   * @returns {Promise<{success: boolean, error: string|null}>}
+   */
+  agentReply: async function ({ apiBase, apiKey }, requestId, reply) {
+    return await fetch(`${apiBase}/browser-extension/agent-reply`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ requestId, reply }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(i18n.t("errors.requestNotFound"));
+        return { success: true, error: null };
+      })
+      .catch((e) => ({ success: false, error: e.message }));
+  },
+
+  /**
+   * Lets a skill run without asking again ("Always allow").
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {string} skillName
+   * @returns {Promise<{success: boolean, error: string|null}>}
+   */
+  whitelistSkill: async function ({ apiBase, apiKey }, skillName) {
+    return await fetch(`${apiBase}/browser-extension/agent-skills/whitelist`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ skillName }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(i18n.t("errors.whitelist"));
+        return { success: true, error: null };
+      })
+      .catch((e) => ({ success: false, error: e.message }));
+  },
+
   disconnect: async function (apiBase, apiKey) {
     try {
       await fetch(`${apiBase}/browser-extension/disconnect`, {
@@ -55,7 +311,7 @@ const BrowserExtension = {
         .then((res) => res.json())
         .then((data) => {
           if (!!data.error)
-            throw new Error(errorData.error || "Failed to disconnect");
+            throw new Error(data.error || i18n.t("errors.disconnect"));
           return;
         });
       return { success: true, error: null };

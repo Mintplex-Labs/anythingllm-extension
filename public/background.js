@@ -1,6 +1,56 @@
+// One-click prompts that run against the selected text in the side panel.
+const QUICK_ACTIONS = {
+  summarize: {
+    title: "Summarize",
+    prompt: "Summarize the selected text.",
+  },
+  explain: {
+    title: "Explain",
+    prompt: "Explain the selected text in simple terms.",
+  },
+  rewrite: {
+    title: "Rewrite",
+    prompt:
+      "Rewrite the selected text to be clearer and more concise. Reply with only the rewritten text.",
+  },
+  fixGrammar: {
+    title: "Fix spelling & grammar",
+    prompt:
+      "Fix any spelling and grammar mistakes in the selected text without changing its meaning. Reply with only the corrected text.",
+  },
+};
+
 const ContextMenuModel = {
   async create(workspaces) {
     await chrome.contextMenus.removeAll();
+
+    chrome.contextMenus.create({
+      id: "chatWithPage",
+      title: "Chat with page",
+      contexts: ["page"],
+    });
+    chrome.contextMenus.create({
+      id: "addImageToChat",
+      title: "Add image to chat",
+      contexts: ["image"],
+    });
+    chrome.contextMenus.create({
+      id: "askAnythingLLM",
+      title: "Ask AnythingLLM about this",
+      contexts: ["selection"],
+    });
+    for (const [id, action] of Object.entries(QUICK_ACTIONS)) {
+      chrome.contextMenus.create({
+        id: `quickAction-${id}`,
+        title: action.title,
+        contexts: ["selection"],
+      });
+    }
+    chrome.contextMenus.create({
+      id: "separator",
+      type: "separator",
+      contexts: ["selection"],
+    });
 
     if (workspaces && workspaces.length > 0) {
       chrome.contextMenus.create({
@@ -286,6 +336,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   await ExtensionModel.checkApiKeyValidity();
 });
 
+chrome.runtime.onStartup.addListener(async () => {
+  await ExtensionModel.updateWorkspaces();
+});
+
 chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
   if (message.action === "connectionUpdated") return ExtensionModel.checkApiKeyValidity();
 
@@ -296,10 +350,11 @@ chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
     const connection = parseConnectionString(message.connectionString);
     if (!connection) return;
     const requestedBy = sender.origin || new URL(sender.url).origin;
-    chrome.storage.session.set(
-      { pendingConnection: { ...connection, requestedBy } },
-      () => chrome.action.openPopup()
-    );
+    // sidePanel.open must run before any await to keep the user gesture.
+    chrome.sidePanel.open({ tabId: sender.tab.id });
+    chrome.storage.session.set({
+      pendingConnection: { ...connection, requestedBy },
+    });
     return;
   }
 });
@@ -337,6 +392,41 @@ function getPageContent(tabId) {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  // sidePanel.open must run before any await to keep the user gesture.
+  if (
+    info.menuItemId === "askAnythingLLM" ||
+    info.menuItemId.startsWith("quickAction-")
+  ) {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+    const action = QUICK_ACTIONS[info.menuItemId.replace("quickAction-", "")];
+    chrome.storage.session.set({
+      pendingSelection: {
+        id: crypto.randomUUID(),
+        text: info.selectionText,
+        title: tab.title,
+        url: tab.url,
+        prompt: action?.prompt ?? null,
+      },
+    });
+    return;
+  }
+
+  if (info.menuItemId === "chatWithPage") {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+    chrome.storage.session.set({
+      pendingPage: { id: crypto.randomUUID(), tabId: tab.id },
+    });
+    return;
+  }
+
+  if (info.menuItemId === "addImageToChat") {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+    chrome.storage.session.set({
+      pendingImage: { id: crypto.randomUUID(), srcUrl: info.srcUrl },
+    });
+    return;
+  }
+
   if (info.menuItemId === "saveToAnythingLLM") {
     ExtensionModel.saveToAnythingLLM(info.selectionText, tab.title, tab.url);
     return;
@@ -390,6 +480,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command !== "open-side-panel" || !tab) return;
+  chrome.sidePanel.open({ windowId: tab.windowId });
+});
+
 // Remove context menu items when connection is lost
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync" && (changes.apiBase || changes.apiKey)) {
@@ -398,6 +493,9 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     }
   }
 });
+
+// The toolbar icon always opens the chat panel; connecting happens in there.
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
 // Update workspaces periodically
 chrome.alarms.create("updateWorkspaces", { periodInMinutes: 1 });
