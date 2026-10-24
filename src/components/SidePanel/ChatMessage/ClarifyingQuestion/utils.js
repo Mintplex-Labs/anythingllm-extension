@@ -50,10 +50,11 @@ export function answerForDraft(question, draft) {
 
 /**
  * @param {{skipped: boolean, answer: any}|null} answer
+ * @param {(key: string) => string} t
  * @returns {string}
  */
-export function formatAnswerDisplay(answer) {
-  if (!answer || answer.skipped) return "[user skipped]";
+export function formatAnswerDisplay(answer, t) {
+  if (!answer || answer.skipped) return t("clarify.skipped");
   if (Array.isArray(answer.answer)) return answer.answer.join(", ");
   return String(answer.answer ?? "");
 }

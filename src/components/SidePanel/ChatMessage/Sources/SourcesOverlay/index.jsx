@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ArrowSquareOut, CaretDown, X } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import { hostnameOf } from "@/utils/tabs";
 import SourceCircle from "../SourceCircle";
 
@@ -10,6 +11,7 @@ import SourceCircle from "../SourceCircle";
  * @param {() => void} props.onClose
  */
 export default function SourcesOverlay({ sources, onClose }) {
+  const { t } = useTranslation();
   const [expandedTitle, setExpandedTitle] = useState(null);
 
   useEffect(() => {
@@ -22,11 +24,11 @@ export default function SourcesOverlay({ sources, onClose }) {
     <div className="fixed inset-0 z-20 flex flex-col bg-zinc-900 light:bg-white animate-in fade-in-0">
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 light:border-slate-200">
         <p className="text-sm font-semibold text-white light:text-slate-900">
-          Sources
+          {t("sources.title")}
         </p>
         <button
           onClick={onClose}
-          aria-label="Close sources"
+          aria-label={t("sources.close")}
           className="border-none bg-transparent flex items-center justify-center w-7 h-7 rounded-md text-zinc-400 light:text-slate-500 hover:bg-zinc-800 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
         >
           <X size={16} weight="bold" />
@@ -51,6 +53,7 @@ export default function SourcesOverlay({ sources, onClose }) {
 }
 
 function SourceCard({ source, expanded, onToggle }) {
+  const { t } = useTranslation();
   const references = source.chunks.length;
   return (
     <div className="rounded-xl bg-zinc-800 light:bg-slate-100">
@@ -65,9 +68,9 @@ function SourceCard({ source, expanded, onToggle }) {
             {source.title}
           </p>
           <p className="text-[10px] leading-[14px] text-zinc-400 light:text-slate-500 truncate">
-            {source.url ? hostnameOf(source.url) : "Document"}
+            {source.url ? hostnameOf(source.url) : t("sources.document")}
             {references > 0 &&
-              ` · ${references} ${references === 1 ? "reference" : "references"}`}
+              ` · ${t("sources.references", { count: references })}`}
           </p>
         </div>
         {!!source.url && (
@@ -76,7 +79,7 @@ function SourceCard({ source, expanded, onToggle }) {
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
-            title="Open"
+            title={t("sources.open")}
             className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 text-zinc-400 light:text-slate-500 hover:text-white light:hover:text-slate-900"
           >
             <ArrowSquareOut size={14} />
@@ -100,7 +103,9 @@ function SourceCard({ source, expanded, onToggle }) {
               </p>
               {chunk.score !== null && (
                 <p className="text-[10px] text-zinc-500 light:text-slate-400">
-                  {Math.round(chunk.score * 100)}% match
+                  {t("sources.match", {
+                    percent: Math.round(chunk.score * 100),
+                  })}
                 </p>
               )}
             </div>

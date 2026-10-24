@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { formatAnswerDisplay } from "../utils";
 
 /**
@@ -8,10 +9,10 @@ import { formatAnswerDisplay } from "../utils";
  * @param {{timedOut?: boolean, skipped?: boolean, answers?: {skipped: boolean, answer: any}[]}} props.result
  */
 export default function SurveyBody({ questions = [], result = {} }) {
-  if (result.timedOut)
-    return <StatusMessage message="No response submitted in time." />;
+  const { t } = useTranslation();
+  if (result.timedOut) return <StatusMessage message={t("clarify.timedOut")} />;
   if (result.skipped)
-    return <StatusMessage message="You let the agent decide." />;
+    return <StatusMessage message={t("clarify.agentDecided")} />;
 
   const answers = Array.isArray(result.answers) ? result.answers : [];
   const showNumbers = questions.length > 1;
@@ -29,7 +30,7 @@ export default function SurveyBody({ questions = [], result = {} }) {
               {question.question}
             </span>
             <span className="font-medium text-white light:text-slate-900 break-words">
-              {formatAnswerDisplay(answers[i])}
+              {formatAnswerDisplay(answers[i], t)}
             </span>
           </div>
         </div>

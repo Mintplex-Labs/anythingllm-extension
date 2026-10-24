@@ -1,5 +1,6 @@
 import React from "react";
 import { X } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Small card for something attached to a message: a tab, selected text or a file.
@@ -19,6 +20,7 @@ export default function ContextCard({
   onRemove = null,
   background = "bg-zinc-900 light:bg-slate-100",
 }) {
+  const { t } = useTranslation();
   return (
     <div
       title={hint}
@@ -28,8 +30,8 @@ export default function ContextCard({
         <div className="invisible group-hover:visible absolute -top-[5px] -right-[5px]">
           <button
             onClick={onRemove}
-            title="Remove"
-            aria-label={`Remove ${title}`}
+            title={t("common.remove")}
+            aria-label={t("attachment.removeItem", { name: title })}
             className="border-none bg-white hover:bg-red-500 text-zinc-800 hover:text-white rounded-full p-1 flex items-center justify-center"
           >
             <X size={10} weight="bold" />

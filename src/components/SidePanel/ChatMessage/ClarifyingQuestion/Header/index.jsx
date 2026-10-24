@@ -1,5 +1,6 @@
 import React from "react";
 import { CaretLeft, CaretRight, X } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 
 const NAV_BUTTON_CLASS =
   "border-none bg-transparent p-0 flex items-center justify-center text-white/70 light:text-slate-700 hover:text-white light:hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed";
@@ -19,6 +20,7 @@ export default function Header({
   isFirst,
   isLast,
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-[18px] w-full">
       <p className="flex-1 min-w-0 text-white light:text-slate-900 text-sm font-medium leading-5 break-words">
@@ -29,18 +31,18 @@ export default function Header({
           <button
             onClick={onPrev}
             disabled={isFirst}
-            aria-label="Previous question"
+            aria-label={t("clarify.previousQuestion")}
             className={NAV_BUTTON_CLASS}
           >
             <CaretLeft size={16} />
           </button>
           <span className="text-xs text-zinc-400 leading-4 whitespace-nowrap select-none">
-            {index + 1} of {total}
+            {t("clarify.position", { index: index + 1, total })}
           </span>
           <button
             onClick={onNext}
             disabled={isLast}
-            aria-label="Next question"
+            aria-label={t("clarify.nextQuestion")}
             className={NAV_BUTTON_CLASS}
           >
             <CaretRight size={16} />
@@ -49,7 +51,7 @@ export default function Header({
       )}
       <button
         onClick={onClose}
-        aria-label="Close and skip"
+        aria-label={t("clarify.closeAndSkip")}
         className={`${NAV_BUTTON_CLASS} shrink-0`}
       >
         <X size={16} />

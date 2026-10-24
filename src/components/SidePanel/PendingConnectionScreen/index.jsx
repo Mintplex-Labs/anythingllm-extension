@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { LinkSimple } from "@phosphor-icons/react";
+import { Trans, useTranslation } from "react-i18next";
 import Screen, { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../Screen";
 
 /**
@@ -16,6 +17,7 @@ export default function PendingConnectionScreen({
   onApprove,
   onReject,
 }) {
+  const { t } = useTranslation();
   const [approving, setApproving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,28 +32,33 @@ export default function PendingConnectionScreen({
   return (
     <Screen
       icon={<LinkSimple size={36} weight="bold" />}
-      title="Connect this extension?"
+      title={t("pending.title")}
       description={
-        <>
-          <span className="font-semibold text-white light:text-slate-900">
-            {request.requestedBy}
-          </span>{" "}
-          wants to connect this extension to{" "}
-          <span className="font-mono break-all">{request.apiBase}</span>. Only
-          approve if you just requested this from your own AnythingLLM instance.
-        </>
+        <Trans
+          i18nKey="pending.description"
+          values={{
+            requestedBy: request.requestedBy,
+            apiBase: request.apiBase,
+          }}
+          components={{
+            requester: (
+              <span className="font-semibold text-white light:text-slate-900" />
+            ),
+            address: <span className="font-mono break-all" />,
+          }}
+        />
       }
     >
       {connected && (
         <p className="text-sm text-amber-400 light:text-amber-600">
-          This will replace your current connection.
+          {t("pending.replaces")}
         </p>
       )}
       <button onClick={approve} disabled={approving} className={PRIMARY_BUTTON}>
-        {approving ? "Connecting..." : "Approve"}
+        {approving ? t("common.connecting") : t("common.approve")}
       </button>
       <button onClick={onReject} className={SECONDARY_BUTTON}>
-        Reject
+        {t("common.reject")}
       </button>
       {!!error && (
         <p className="text-sm text-red-400 light:text-red-600">{error}</p>

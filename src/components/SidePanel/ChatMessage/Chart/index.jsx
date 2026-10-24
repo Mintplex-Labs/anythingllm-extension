@@ -29,6 +29,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useTranslation } from "react-i18next";
 import { isLightMode } from "@/utils/theme";
 
 // Same palette as the main app's chart helpers.
@@ -73,6 +74,7 @@ function themeColors() {
  * @param {{type: string, title?: string, dataset: object[]|string}} props.chart
  */
 export default function Chart({ chart }) {
+  const { t } = useTranslation();
   const data = parseDataset(chart.dataset);
   if (data.length === 0) return null;
   const keys = Object.keys(data[0]);
@@ -92,7 +94,8 @@ export default function Chart({ chart }) {
             data,
             value,
             keys,
-            themeColors()
+            themeColors(),
+            t
           )}
         </ResponsiveContainer>
       </div>
@@ -115,7 +118,8 @@ function renderChart(
   data,
   value,
   keys,
-  { grid, treemapStroke, tooltip }
+  { grid, treemapStroke, tooltip },
+  t
 ) {
   if (type === "area")
     return (
@@ -247,7 +251,7 @@ function renderChart(
     );
   return (
     <p className="text-xs text-zinc-400 light:text-slate-500">
-      Unsupported chart type.
+      {t("chat.unsupportedChart")}
     </p>
   );
 }

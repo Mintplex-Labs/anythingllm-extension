@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Microphone } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 
 const SILENCE_TIMEOUT_MS = 3200;
 
@@ -9,6 +10,7 @@ const SILENCE_TIMEOUT_MS = 3200;
  * @param {(text: string) => void} props.onTranscript - called with each finished phrase
  */
 export default function MicButton({ onTranscript }) {
+  const { t } = useTranslation();
   const [listening, setListening] = useState(false);
   const recognition = useRef(null);
   const silenceTimer = useRef(null);
@@ -57,8 +59,8 @@ export default function MicButton({ onTranscript }) {
   return (
     <button
       onClick={listening ? () => recognition.current?.stop() : start}
-      title={listening ? "Stop listening" : "Speak"}
-      aria-label={listening ? "Stop listening" : "Speak"}
+      title={listening ? t("composer.stopListening") : t("composer.speak")}
+      aria-label={listening ? t("composer.stopListening") : t("composer.speak")}
       className={`group border-none flex justify-center items-center w-8 h-8 rounded-full hover:bg-zinc-700 light:hover:bg-slate-200 ${
         listening ? "bg-zinc-700 light:bg-slate-200" : "bg-transparent"
       }`}

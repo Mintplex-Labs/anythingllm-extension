@@ -1,5 +1,6 @@
 import React from "react";
 import { PencilSimple } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 
 const ROW_CLASS =
   "border-none w-full flex items-center gap-[9px] p-2 rounded-lg text-left transition-colors";
@@ -20,6 +21,7 @@ export default function ChoiceForm({
   allowSkip,
   onSkip,
 }) {
+  const { t } = useTranslation();
   const showOther = question.allowOther !== false;
 
   function isChecked(option) {
@@ -84,7 +86,7 @@ export default function ChoiceForm({
             <span
               className={`text-sm leading-5 ${draft.otherSelected ? "text-white light:text-slate-900" : "text-zinc-400 light:text-slate-600"}`}
             >
-              Other
+              {t("clarify.other")}
             </span>
           </button>
           {allowSkip && (
@@ -92,7 +94,7 @@ export default function ChoiceForm({
               onClick={onSkip}
               className="border border-solid border-zinc-600 light:border-slate-300 bg-transparent rounded-lg h-7 px-3 flex items-center justify-center text-white light:text-slate-900 text-xs font-medium leading-4 shrink-0 hover:bg-zinc-700/40 light:hover:bg-slate-200/60"
             >
-              Skip
+              {t("common.skip")}
             </button>
           )}
         </div>
@@ -103,7 +105,7 @@ export default function ChoiceForm({
           type="text"
           value={draft.otherText || ""}
           onChange={(e) => onChange({ otherText: e.target.value })}
-          placeholder="Type your answer"
+          placeholder={t("clarify.answerPlaceholder")}
           className="mt-2 w-full border border-solid border-zinc-700 light:border-slate-500 bg-zinc-800 light:bg-white text-white light:text-slate-900 placeholder:text-zinc-500 light:placeholder:text-slate-500 text-sm rounded-lg focus:outline-white light:focus:outline-slate-400 outline-none p-2"
         />
       )}

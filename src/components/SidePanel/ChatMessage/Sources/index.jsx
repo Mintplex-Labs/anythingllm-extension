@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { groupSources } from "@/utils/sources";
 import SourceCircle from "./SourceCircle";
 import SourcesOverlay from "./SourcesOverlay";
@@ -11,6 +12,7 @@ const PREVIEW_COUNT = 3;
  * @param {object[]} props.sources
  */
 export default function Sources({ sources }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const grouped = groupSources(sources);
   if (grouped.length === 0) return null;
@@ -24,7 +26,7 @@ export default function Sources({ sources }) {
         onClick={() => setOpen(true)}
         className="border-none bg-transparent w-fit flex items-center gap-x-1.5 -ml-2.5 px-2.5 py-1 rounded-full text-xs text-white light:text-slate-800 hover:bg-white/5 light:hover:bg-black/5"
       >
-        Sources
+        {t("sources.title")}
         <div className="flex">
           {preview.map((source) => (
             <SourceCircle

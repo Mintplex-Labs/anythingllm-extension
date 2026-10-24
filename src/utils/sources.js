@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+
 // Pages sent from a tab carry their title and address as the first two lines.
 const PAGE_HEADER = /^Title: .*\nURL: (\S+)\n/;
 
@@ -17,7 +19,7 @@ const PAGE_HEADER = /^Title: .*\nURL: (\S+)\n/;
 export function groupSources(sources = []) {
   const groups = new Map();
   for (const source of sources) {
-    const title = source.title || "Untitled";
+    const title = source.title || i18n.t("sources.untitled");
     if (!groups.has(title))
       groups.set(title, {
         title,

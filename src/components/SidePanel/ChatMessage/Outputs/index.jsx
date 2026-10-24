@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { DownloadSimple, FileArrowDown } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import BrowserExtension from "@/models/browserExtension";
 
 /**
@@ -27,6 +28,7 @@ export default function Outputs({ outputs, connection }) {
 }
 
 function GeneratedImage({ output, connection }) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -47,7 +49,7 @@ function GeneratedImage({ output, connection }) {
   if (error)
     return (
       <p className="text-xs text-zinc-500 light:text-slate-500">
-        Could not load image.
+        {t("chat.imageLoadFailed")}
       </p>
     );
   if (!url)
@@ -66,6 +68,7 @@ function GeneratedImage({ output, connection }) {
 }
 
 function GeneratedFile({ output, connection }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
 
   async function download() {
@@ -99,8 +102,8 @@ function GeneratedFile({ output, connection }) {
       <button
         onClick={download}
         disabled={busy}
-        title="Download"
-        aria-label={`Download ${output.filename}`}
+        title={t("common.download")}
+        aria-label={t("chat.downloadFile", { filename: output.filename })}
         className="border-none flex items-center justify-center w-7 h-7 rounded-md bg-transparent text-zinc-300 light:text-slate-600 hover:bg-zinc-700 light:hover:bg-slate-200 hover:text-white light:hover:text-slate-900 disabled:opacity-50"
       >
         <DownloadSimple size={16} />

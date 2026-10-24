@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CircleNotch, MagnifyingGlass } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import BrowserExtension from "@/models/browserExtension";
 
 /**
@@ -25,6 +26,7 @@ export default function ThreadDrawer({
   onClose,
   onError,
 }) {
+  const { t } = useTranslation();
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -56,7 +58,7 @@ export default function ThreadDrawer({
 
   const query = search.trim().toLowerCase();
   const shown = threads.filter((thread) =>
-    threadName(thread).toLowerCase().includes(query)
+    threadName(thread, t).toLowerCase().includes(query)
   );
 
   return (
@@ -76,10 +78,10 @@ export default function ThreadDrawer({
         <div className="flex flex-col gap-y-3 p-3">
           <div className="flex flex-col px-1.5 pt-1">
             <p className="text-sm font-semibold text-white light:text-slate-900">
-              Threads
+              {t("threads.title")}
             </p>
             <p className="text-xs text-zinc-400 light:text-slate-500 truncate">
-              Saved chats in {workspaceName}
+              {t("threads.subtitle", { workspace: workspaceName })}
             </p>
           </div>
           <div className="h-[32px] flex items-center gap-x-2.5 bg-zinc-800 light:bg-slate-100 rounded-lg px-2.5">
@@ -92,7 +94,7 @@ export default function ThreadDrawer({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search threads"
+              placeholder={t("threads.search")}
               tabIndex={open ? 0 : -1}
               className="flex-1 min-w-0 p-0 bg-transparent border-none outline-none text-sm text-white light:text-slate-900 placeholder:text-white/40 light:placeholder:text-slate-400"
             />
@@ -121,17 +123,20 @@ function ThreadList({
   activeThreadId,
   onSelect,
 }) {
+  const { t } = useTranslation();
   if (loading)
     return (
       <div className="flex items-center gap-x-2 px-1.5 py-2 text-sm text-white/40 light:text-slate-400">
         <CircleNotch size={16} className="animate-spin" />
-        Loading threads...
+        {t("threads.loading")}
       </div>
     );
   if (error) return <DrawerNote text={error} />;
   if (threads.length === 0)
     return (
-      <DrawerNote text={searching ? "No threads found" : "No threads yet"} />
+      <DrawerNote
+        text={searching ? t("threads.noResults") : t("threads.empty")}
+      />
     );
 
   return threads.map((thread) => {
@@ -147,7 +152,7 @@ function ThreadList({
             : "bg-transparent text-white/70 light:text-slate-600 hover:bg-white/5 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
         }`}
       >
-        <span className="truncate">{threadName(thread)}</span>
+        <span className="truncate">{threadName(thread, t)}</span>
       </button>
     );
   });
@@ -161,8 +166,8 @@ function DrawerNote({ text }) {
   );
 }
 
-function threadName(thread) {
-  return thread.name || `Thread ${thread.id}`;
+function threadName(thread, t) {
+  return thread.name || t("threads.untitled", { id: thread.id });
 }
 
 function scrollToCenter(element) {

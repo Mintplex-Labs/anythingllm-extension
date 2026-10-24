@@ -6,6 +6,7 @@ import {
   Shuffle,
   XCircle,
 } from "@phosphor-icons/react";
+import { Trans, useTranslation } from "react-i18next";
 import { isImageFile, openAttachment } from "@/utils/attachments";
 import { renderMarkdown } from "@/utils/markdown";
 import AttachmentCard from "../AttachmentCard";
@@ -29,6 +30,7 @@ const THINK_PATTERN = /<(think|thinking|thought)>([\s\S]*?)(?:<\/\1>|$)/g;
  * @param {{apiBase: string, apiKey: string}} props.connection
  */
 export default function ChatMessage({ message, connection }) {
+  const { t } = useTranslation();
   if (message.role === "user") return <UserMessage message={message} />;
 
   const { thoughts, text } = splitThinking(message.content);
@@ -59,12 +61,12 @@ export default function ChatMessage({ message, connection }) {
       ))}
       {!hasOutput && !message.done && activity.length === 0 && (
         <p className="text-sm text-zinc-400 light:text-slate-500 animate-pulse">
-          Thinking...
+          {t("chat.thinking")}
         </p>
       )}
       {!hasOutput && message.done && !message.error && (
         <p className="text-sm text-zinc-400 light:text-slate-500">
-          No response.
+          {t("chat.noResponse")}
         </p>
       )}
       {message.charts.map((chart, i) => (
@@ -162,11 +164,13 @@ function RouteNote({ routedTo }) {
         className="shrink-0 text-zinc-400 light:text-slate-600"
       />
       <span className="text-sm text-zinc-400 light:text-slate-600 break-words min-w-0">
-        Routed to{" "}
-        <span className="text-zinc-50 light:text-slate-950">
-          {routedTo.model}
-        </span>
-        {!!routedTo.ruleTitle && ` by ${routedTo.ruleTitle}`}
+        <Trans
+          i18nKey={routedTo.ruleTitle ? "chat.routedToByRule" : "chat.routedTo"}
+          values={{ model: routedTo.model, rule: routedTo.ruleTitle }}
+          components={{
+            model: <span className="text-zinc-50 light:text-slate-950" />,
+          }}
+        />
       </span>
     </div>
   );
@@ -177,6 +181,7 @@ function RouteNote({ routedTo }) {
  * an image the spinner is swapped for a static notice.
  */
 function ImagePending({ aborted }) {
+  const { t } = useTranslation();
   if (aborted)
     return (
       <ImagePendingFrame background="bg-gradient-to-br from-zinc-600 via-zinc-800 to-zinc-900 light:from-slate-200 light:via-slate-300 light:to-slate-100">
@@ -186,7 +191,7 @@ function ImagePending({ aborted }) {
           className="text-white/60 light:text-slate-500"
         />
         <p className="text-white/70 light:text-slate-600 text-sm font-medium">
-          Image generation was aborted
+          {t("chat.imageAborted")}
         </p>
       </ImagePendingFrame>
     );
@@ -199,7 +204,7 @@ function ImagePending({ aborted }) {
         className="animate-spin text-white light:text-slate-700"
       />
       <p className="text-white light:text-slate-800 text-sm font-semibold">
-        Generating your image…
+        {t("chat.imageGenerating")}
       </p>
     </ImagePendingFrame>
   );
@@ -240,6 +245,7 @@ function ReplyFooter({ text, sources, metrics }) {
 }
 
 function CopyButton({ text }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   function copy() {
@@ -251,8 +257,8 @@ function CopyButton({ text }) {
   return (
     <button
       onClick={copy}
-      title="Copy"
-      aria-label="Copy"
+      title={t("common.copy")}
+      aria-label={t("common.copy")}
       className="border-none bg-transparent flex items-center justify-center shrink-0 w-6 h-6 rounded-md text-zinc-500 light:text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}

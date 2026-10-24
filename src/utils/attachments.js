@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+
 // Non-image files use this mime so the server parses them to text first.
 const DOCUMENT_MIME = "application/anythingllm-document";
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
@@ -108,10 +110,10 @@ async function imageToPng(file) {
  */
 export function attachmentProblem(file) {
   if (file.size > MAX_ATTACHMENT_BYTES)
-    return `${file.name} is larger than 25 MB.`;
+    return i18n.t("composer.fileTooLarge", { filename: file.name });
   const extension = file.name.split(".").pop().toLowerCase();
   if (!isImageFile(file) && !DOCUMENT_EXTENSIONS.includes(extension))
-    return `${file.name} is not a supported file type.`;
+    return i18n.t("composer.fileUnsupported", { filename: file.name });
   return null;
 }
 

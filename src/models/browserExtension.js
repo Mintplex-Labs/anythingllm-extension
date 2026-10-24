@@ -1,9 +1,10 @@
+import i18n from "@/i18n";
 import { isLightMode } from "@/utils/theme";
 
 // AnythingLLM answered 403: the API key was deleted there.
 export class RevokedKeyError extends Error {
   constructor() {
-    super("This connection was removed in AnythingLLM.");
+    super(i18n.t("errors.revoked"));
     this.name = "RevokedKeyError";
   }
 }
@@ -20,7 +21,7 @@ async function forbiddenError(apiBase, apiKey, response) {
   const { revoked } = await BrowserExtension.workspaces(apiBase, apiKey);
   if (revoked) return new RevokedKeyError();
   const { error } = await response.json().catch(() => ({}));
-  return new Error(error || "AnythingLLM refused this request.");
+  return new Error(error || i18n.t("errors.refused"));
 }
 
 const BrowserExtension = {
@@ -127,7 +128,7 @@ const BrowserExtension = {
       .then(async (res) => {
         if (res.status === 403)
           throw await forbiddenError(apiBase, apiKey, res);
-        if (!res.ok) throw new Error("Could not start a thread");
+        if (!res.ok) throw new Error(i18n.t("errors.startThread"));
         return res.json();
       })
       .then((data) => ({ threadId: data.thread.id, error: null }))
@@ -152,7 +153,7 @@ const BrowserExtension = {
       .then(async (res) => {
         if (res.status === 403)
           throw await forbiddenError(apiBase, apiKey, res);
-        if (!res.ok) throw new Error("Could not load threads");
+        if (!res.ok) throw new Error(i18n.t("errors.loadThreads"));
         return res.json();
       })
       .then((data) => ({ threads: data.threads ?? [], error: null }))
@@ -177,7 +178,7 @@ const BrowserExtension = {
       .then(async (res) => {
         if (res.status === 403)
           throw await forbiddenError(apiBase, apiKey, res);
-        if (!res.ok) throw new Error("Could not load this chat");
+        if (!res.ok) throw new Error(i18n.t("errors.loadChat"));
         return res.json();
       })
       .then((data) => ({ history: data.history ?? [], error: null }))
@@ -213,7 +214,7 @@ const BrowserExtension = {
       throw await forbiddenError(apiBase, apiKey, response);
     if (!response.ok) {
       const { error } = await response.json().catch(() => ({}));
-      throw new Error(error || "Failed to send message");
+      throw new Error(error || i18n.t("errors.sendMessage"));
     }
 
     const reader = response.body.getReader();
@@ -248,7 +249,7 @@ const BrowserExtension = {
       headers: { Authorization: `Bearer ${apiKey}` },
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Could not load file");
+        if (!res.ok) throw new Error(i18n.t("errors.loadFile"));
         return res.blob();
       })
       .then((blob) => ({ url: URL.createObjectURL(blob), error: null }))
@@ -273,7 +274,7 @@ const BrowserExtension = {
       body: JSON.stringify({ requestId, reply }),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Request not found");
+        if (!res.ok) throw new Error(i18n.t("errors.requestNotFound"));
         return { success: true, error: null };
       })
       .catch((e) => ({ success: false, error: e.message }));
@@ -295,7 +296,7 @@ const BrowserExtension = {
       body: JSON.stringify({ skillName }),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Could not update whitelist");
+        if (!res.ok) throw new Error(i18n.t("errors.whitelist"));
         return { success: true, error: null };
       })
       .catch((e) => ({ success: false, error: e.message }));
@@ -310,7 +311,7 @@ const BrowserExtension = {
         .then((res) => res.json())
         .then((data) => {
           if (!!data.error)
-            throw new Error(data.error || "Failed to disconnect");
+            throw new Error(data.error || i18n.t("errors.disconnect"));
           return;
         });
       return { success: true, error: null };

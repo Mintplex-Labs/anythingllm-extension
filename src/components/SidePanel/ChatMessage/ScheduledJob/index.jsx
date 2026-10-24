@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowRight, CalendarCheck } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Card shown when the agent created a scheduled job. Opens the job's run
@@ -9,6 +10,7 @@ import { ArrowRight, CalendarCheck } from "@phosphor-icons/react";
  * @param {{apiBase: string}} props.connection
  */
 export default function ScheduledJob({ job, connection }) {
+  const { t } = useTranslation();
   if (!job.jobId) return null;
   const appBase = connection.apiBase.replace(/\/api\/?$/, "");
   return (
@@ -23,14 +25,15 @@ export default function ScheduledJob({ job, connection }) {
       </div>
       <div className="flex flex-col min-w-0 flex-1 text-left">
         <p className="text-white light:text-slate-900 text-sm font-medium leading-snug break-words">
-          {job.jobName || "Scheduled job"}
+          {job.jobName || t("scheduledJob.fallbackName")}
         </p>
         <p className="text-zinc-400 light:text-slate-500 text-xs leading-snug break-words">
-          Scheduled job created{job.schedule ? ` · ${job.schedule}` : ""}
+          {t("scheduledJob.created")}
+          {job.schedule ? ` · ${job.schedule}` : ""}
         </p>
       </div>
       <div className="flex items-center gap-x-1 pr-2 text-white light:text-slate-900 text-xs font-medium shrink-0">
-        <span>View job</span>
+        <span>{t("scheduledJob.view")}</span>
         <ArrowRight size={14} weight="bold" />
       </div>
     </a>

@@ -3,11 +3,13 @@ import {
   CaretDown,
   DotsThreeVertical,
   FolderSimplePlus,
+  GearSix,
   NotePencil,
   SidebarSimple,
   SignOut,
   WifiSlash,
 } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import BrowserExtension, { RevokedKeyError } from "@/models/browserExtension";
 import { isServerOutdated, updateUrl } from "@/utils/serverVersion";
 import ChatComposer from "./ChatComposer";
@@ -15,14 +17,14 @@ import ChatMessage from "./ChatMessage";
 import ConnectScreen from "./ConnectScreen";
 import PendingConnectionScreen from "./PendingConnectionScreen";
 import Screen, { PRIMARY_BUTTON, TEXT_BUTTON } from "./Screen";
+import Settings from "./Settings";
 import ThreadDrawer from "./ThreadDrawer";
 import UpdateRequired from "./UpdateRequired";
 
 const WORKSPACE_STORAGE_KEY = "chatWorkspaceId";
-const REVOKED_NOTICE =
-  "This connection was removed in AnythingLLM. Connect again to keep chatting.";
 
 export default function SidePanel() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState("loading");
   const [connection, setConnection] = useState(null);
   // Why the last connection ended, shown on the connect screen.
@@ -37,6 +39,7 @@ export default function SidePanel() {
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // null, "loading" or "error" while a saved thread is being opened.
   const [historyStatus, setHistoryStatus] = useState(null);
   // Bumped on every chat switch so a slow history load can tell it is stale.
@@ -92,7 +95,7 @@ export default function SidePanel() {
         BrowserExtension.serverVersion(apiBase),
         chrome.storage.local.get(WORKSPACE_STORAGE_KEY),
       ]);
-    if (revoked) return forgetConnection(REVOKED_NOTICE);
+    if (revoked) return forgetConnection(t("connect.revoked"));
     if (error) return setStatus("offline");
     if (isServerOutdated(version)) return setStatus("outdated");
 
@@ -132,13 +135,15 @@ export default function SidePanel() {
       // Anything sent while the history loaded goes after it.
       setMessages((prev) => [...historyToMessages(history), ...prev]);
     } catch (error) {
-      if (error instanceof RevokedKeyError) forgetConnection(REVOKED_NOTICE);
+      if (error instanceof RevokedKeyError)
+        forgetConnection(t("connect.revoked"));
     }
   }
 
   function handleDrawerError(error) {
     setDrawerOpen(false);
-    if (error instanceof RevokedKeyError) forgetConnection(REVOKED_NOTICE);
+    if (error instanceof RevokedKeyError)
+      forgetConnection(t("connect.revoked"));
   }
 
   function selectWorkspace(id) {
@@ -154,12 +159,11 @@ export default function SidePanel() {
    */
   async function connect(connectionString) {
     const [apiBase, apiKey] = connectionString.split("|");
-    if (!apiBase || !apiKey)
-      return "That doesn't look like a connection string.";
+    if (!apiBase || !apiKey) return t("connect.invalid");
     const { online } = await BrowserExtension.checkOnline(apiBase);
-    if (!online) return "Could not reach AnythingLLM at that address.";
+    if (!online) return t("connect.unreachable");
     const { response } = await BrowserExtension.checkApiKey(apiBase, apiKey);
-    if (!response.ok) return "AnythingLLM rejected this connection string.";
+    if (!response.ok) return t("connect.rejected");
     setNotice(null);
     await chrome.storage.sync.set({ apiBase, apiKey });
     chrome.runtime.sendMessage({ action: "connectionUpdated" });
@@ -247,7 +251,8 @@ export default function SidePanel() {
         onChunk: updateReply,
       });
     } catch (error) {
-      if (error instanceof RevokedKeyError) forgetConnection(REVOKED_NOTICE);
+      if (error instanceof RevokedKeyError)
+        forgetConnection(t("connect.revoked"));
       else if (error.name !== "AbortError")
         updateReply({ type: "abort", error: error.message });
     }
@@ -271,14 +276,14 @@ export default function SidePanel() {
     return (
       <Screen
         icon={<WifiSlash size={36} weight="fill" />}
-        title="Can't reach AnythingLLM"
-        description="Make sure your instance is running, then try again."
+        title={t("offline.title")}
+        description={t("offline.description")}
       >
         <button onClick={loadWorkspaces} className={PRIMARY_BUTTON}>
-          Try again
+          {t("offline.retry")}
         </button>
         <button onClick={disconnect} className={TEXT_BUTTON}>
-          Disconnect
+          {t("common.disconnect")}
         </button>
       </Screen>
     );
@@ -294,14 +299,14 @@ export default function SidePanel() {
     return (
       <Screen
         icon={<FolderSimplePlus size={36} weight="fill" />}
-        title="No workspaces yet"
-        description="Create a workspace in AnythingLLM to start chatting."
+        title={t("noWorkspaces.title")}
+        description={t("noWorkspaces.description")}
       >
         <button onClick={loadWorkspaces} className={PRIMARY_BUTTON}>
-          Refresh
+          {t("noWorkspaces.refresh")}
         </button>
         <button onClick={disconnect} className={TEXT_BUTTON}>
-          Disconnect
+          {t("common.disconnect")}
         </button>
       </Screen>
     );
@@ -309,7 +314,10 @@ export default function SidePanel() {
   return (
     <div className="flex flex-col h-screen w-full bg-zinc-900 light:bg-white text-white light:text-slate-900">
       <div className="flex items-center gap-x-2 px-3 py-2.5 border-b border-zinc-800 light:border-slate-200">
-        <HeaderButton label="Threads" onClick={() => setDrawerOpen(true)}>
+        <HeaderButton
+          label={t("header.threads")}
+          onClick={() => setDrawerOpen(true)}
+        >
           <SidebarSimple size={18} />
         </HeaderButton>
         <div className="relative flex-1 min-w-0">
@@ -330,10 +338,13 @@ export default function SidePanel() {
             className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 light:text-slate-500"
           />
         </div>
-        <HeaderButton label="New chat" onClick={startNewChat}>
+        <HeaderButton label={t("header.newChat")} onClick={startNewChat}>
           <NotePencil size={18} />
         </HeaderButton>
-        <HeaderMenu onDisconnect={disconnect} />
+        <HeaderMenu
+          onSettings={() => setSettingsOpen(true)}
+          onDisconnect={disconnect}
+        />
       </div>
 
       <div
@@ -370,6 +381,7 @@ export default function SidePanel() {
         onClose={() => setDrawerOpen(false)}
         onError={handleDrawerError}
       />
+      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
@@ -502,12 +514,11 @@ function historyToMessages(history) {
 }
 
 function EmptyChat({ historyStatus }) {
-  if (historyStatus === "loading") return <ChatNote text="Loading chat..." />;
+  const { t } = useTranslation();
+  if (historyStatus === "loading") return <ChatNote text={t("chat.loading")} />;
   if (historyStatus === "error")
-    return <ChatNote text="Couldn't load this chat." />;
-  return (
-    <ChatNote text="Ask about this page or your workspace documents. Type @ to add other tabs." />
-  );
+    return <ChatNote text={t("chat.loadFailed")} />;
+  return <ChatNote text={t("chat.intro")} />;
 }
 
 function ChatNote({ text }) {
@@ -531,7 +542,8 @@ function HeaderButton({ label, onClick, children }) {
   );
 }
 
-function HeaderMenu({ onDisconnect }) {
+function HeaderMenu({ onSettings, onDisconnect }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -551,22 +563,40 @@ function HeaderMenu({ onDisconnect }) {
   return (
     <div className="relative" onMouseDown={(e) => e.stopPropagation()}>
       <HeaderButton
-        label="More options"
+        label={t("header.moreOptions")}
         onClick={() => setOpen((prev) => !prev)}
       >
         <DotsThreeVertical size={18} weight="bold" />
       </HeaderButton>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-10 min-w-[150px] p-1 rounded-lg bg-zinc-800 light:bg-white border border-zinc-700 light:border-slate-300 shadow-lg">
-          <button
+          <MenuItem
+            icon={GearSix}
+            label={t("settings.title")}
+            onClick={() => {
+              setOpen(false);
+              onSettings();
+            }}
+          />
+          <MenuItem
+            icon={SignOut}
+            label={t("common.disconnect")}
             onClick={onDisconnect}
-            className="border-none w-full flex items-center gap-x-2 px-2.5 py-2 rounded-md text-sm bg-transparent text-zinc-200 light:text-slate-700 hover:bg-zinc-700 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
-          >
-            <SignOut size={16} />
-            Disconnect
-          </button>
+          />
         </div>
       )}
     </div>
+  );
+}
+
+function MenuItem({ icon: Icon, label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="border-none w-full flex items-center gap-x-2 px-2.5 py-2 rounded-md text-sm bg-transparent text-zinc-200 light:text-slate-700 hover:bg-zinc-700 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
+    >
+      <Icon size={16} />
+      {label}
+    </button>
   );
 }

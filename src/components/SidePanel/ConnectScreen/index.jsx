@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { PlugsConnected } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import Screen, { PRIMARY_BUTTON } from "../Screen";
 
 const INPUT =
@@ -11,6 +12,7 @@ const INPUT =
  * @param {string|null} [props.notice] - why the previous connection ended
  */
 export default function ConnectScreen({ onConnect, notice = null }) {
+  const { t } = useTranslation();
   const [connectionString, setConnectionString] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
@@ -27,8 +29,8 @@ export default function ConnectScreen({ onConnect, notice = null }) {
   return (
     <Screen
       icon={<PlugsConnected size={36} weight="fill" />}
-      title="Connect to AnythingLLM"
-      description="Paste the connection string from Settings > Tools > Browser Extension in your AnythingLLM instance."
+      title={t("connect.title")}
+      description={t("connect.description")}
     >
       {!!notice && (
         <p className="text-sm text-amber-400 light:text-amber-600">{notice}</p>
@@ -38,13 +40,13 @@ export default function ConnectScreen({ onConnect, notice = null }) {
           type="text"
           value={connectionString}
           onChange={(e) => setConnectionString(e.target.value)}
-          placeholder="Paste connection string"
+          placeholder={t("connect.placeholder")}
           className={INPUT}
           autoFocus
           required
         />
         <button type="submit" disabled={connecting} className={PRIMARY_BUTTON}>
-          {connecting ? "Connecting..." : "Connect"}
+          {connecting ? t("common.connecting") : t("connect.button")}
         </button>
       </form>
       {!!error && (

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { CaretDown, Check, Hammer, X } from "@phosphor-icons/react";
+import { Trans, useTranslation } from "react-i18next";
 import BrowserExtension from "@/models/browserExtension";
 import useTimeoutProgress from "@/hooks/useTimeoutProgress";
 import TimeoutBar from "../TimeoutBar";
@@ -12,6 +13,7 @@ import TimeoutBar from "../TimeoutBar";
  * @param {{apiBase: string, apiKey: string}} props.connection
  */
 export default function ToolApproval({ approval, connection }) {
+  const { t } = useTranslation();
   const {
     requestId,
     skillName,
@@ -47,17 +49,26 @@ export default function ToolApproval({ approval, connection }) {
         <div className="flex items-start gap-2 min-w-0">
           <Hammer size={16} className="shrink-0 mt-0.5" />
           <p className="text-white/80 light:text-slate-900 font-medium text-sm break-words">
-            Model wants to call{" "}
-            <span className="font-semibold text-sky-400 light:text-sky-600">
-              {skillName}
-            </span>
+            <Trans
+              i18nKey="toolApproval.wantsToCall"
+              values={{ skill: skillName }}
+              components={{
+                skill: (
+                  <span className="font-semibold text-sky-400 light:text-sky-600" />
+                ),
+              }}
+            />
           </p>
         </div>
         {hasPayload && (
           <button
             onClick={() => setIsExpanded((prev) => !prev)}
             className="border-none bg-transparent shrink-0 text-white light:text-slate-900"
-            aria-label={isExpanded ? "Hide details" : "Show details"}
+            aria-label={
+              isExpanded
+                ? t("toolApproval.hideDetails")
+                : t("toolApproval.showDetails")
+            }
           >
             <CaretDown
               className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
@@ -100,18 +111,19 @@ function Decision({
   onApprove,
   onReject,
 }) {
+  const { t } = useTranslation();
   if (approved === false)
     return (
       <div className="flex items-center gap-1 text-sm font-medium text-red-400 light:text-red-500 pb-2">
         <X size={16} weight="bold" />
-        <span>Tool call was rejected</span>
+        <span>{t("toolApproval.rejected")}</span>
       </div>
     );
   if (approved === true)
     return (
       <div className="flex items-center gap-1 text-sm font-medium text-green-400 light:text-green-500 pb-2">
         <Check size={16} weight="bold" />
-        <span>Tool call was approved</span>
+        <span>{t("toolApproval.approved")}</span>
       </div>
     );
 
@@ -122,13 +134,13 @@ function Decision({
           onClick={onApprove}
           className="border-none transition-all duration-300 bg-white text-black hover:opacity-60 px-4 py-2 rounded-lg text-sm"
         >
-          Approve
+          {t("common.approve")}
         </button>
         <button
           onClick={onReject}
           className="border-none bg-transparent text-white light:text-slate-900 text-sm font-medium w-[70px] h-9 rounded-lg hover:bg-white/5 light:hover:bg-slate-300"
         >
-          Reject
+          {t("common.reject")}
         </button>
       </div>
       <label className="flex items-center gap-2 cursor-pointer text-white/60 light:text-slate-600 text-xs hover:text-white/80 light:hover:text-slate-800 transition-colors">
@@ -138,7 +150,7 @@ function Decision({
           onChange={(e) => setAlwaysAllow(e.target.checked)}
           className="w-3.5 h-3.5 rounded border-white/20 bg-transparent cursor-pointer"
         />
-        <span>Always allow {skillName}</span>
+        <span>{t("toolApproval.alwaysAllow", { skill: skillName })}</span>
       </label>
     </div>
   );

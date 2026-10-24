@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Brain } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import AgentAnimation from "@/media/animations/agent-animation.webm";
 import AgentStatic from "@/media/animations/agent-static.png";
 import { renderMarkdown } from "@/utils/markdown";
@@ -19,6 +20,7 @@ import {
  * @param {boolean} props.streaming - the reply is still being produced
  */
 export default function Thoughts({ nodes, streaming }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { arrivals, finalizedAt } = useActivityTimestamps(nodes, streaming);
   if (nodes.length === 0) return null;
@@ -33,6 +35,7 @@ export default function Thoughts({ nodes, streaming }) {
     streaming,
     lastNode,
     totalDuration,
+    t,
   });
 
   return (
@@ -83,11 +86,14 @@ export default function Thoughts({ nodes, streaming }) {
   );
 }
 
-function labelFor({ thinking, streaming, lastNode, totalDuration }) {
-  if (thinking) return "Thinking...";
+function labelFor({ thinking, streaming, lastNode, totalDuration, t }) {
+  if (thinking) return t("thoughts.thinking");
   if (streaming) return cleanStatus(lastNode.content);
-  if (totalDuration) return `Thought for ${formatDuration(totalDuration)}`;
-  return "Thoughts";
+  if (totalDuration)
+    return t("thoughts.thoughtFor", {
+      duration: formatDuration(totalDuration),
+    });
+  return t("thoughts.title");
 }
 
 function cleanStatus(content) {
@@ -128,6 +134,7 @@ function useActivityTimestamps(nodes, active) {
 }
 
 function ActivityIcon({ active, thinking, hasStatusNodes }) {
+  const { t } = useTranslation();
   if (active && thinking)
     return <Brain className="size-4 flex-shrink-0 mt-0.5" />;
 
@@ -139,7 +146,7 @@ function ActivityIcon({ active, thinking, hasStatusNodes }) {
         muted
         playsInline
         className="w-4 h-4 flex-shrink-0 mt-0.5 scale-[165%] light:invert light:opacity-50"
-        aria-label="Agent is thinking..."
+        aria-label={t("thoughts.agentThinking")}
       >
         <source src={AgentAnimation} type="video/webm" />
       </video>
@@ -149,7 +156,7 @@ function ActivityIcon({ active, thinking, hasStatusNodes }) {
     return (
       <img
         src={AgentStatic}
-        alt="Agent complete"
+        alt={t("thoughts.agentComplete")}
         className="w-4 h-4 flex-shrink-0 mt-0.5 light:invert light:opacity-50"
       />
     );

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowUp, At, Globe, Plus, TextAa } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import {
   getActiveTab,
   hostnameOf,
@@ -30,6 +31,7 @@ const MAX_PAGES = 5;
  * @param {() => void} props.onStop
  */
 export default function ChatComposer({ streaming, onSend, onStop }) {
+  const { t } = useTranslation();
   const [text, setText] = useState("");
   const [activeTab, setActiveTab] = useState(null);
   // Removing the current page card keeps it off until a new chat.
@@ -128,7 +130,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   // current page card was removed or a selection is standing in for it.
   async function attachPage(tabId) {
     const tab = await chrome.tabs.get(tabId).catch(() => null);
-    if (!isReadable(tab)) return setNotice("AnythingLLM can't read this page.");
+    if (!isReadable(tab)) return setNotice(t("composer.pageUnreadable"));
     setActiveTabDismissed(false);
     setMentionedTabs((prev) =>
       prev.some((t) => t.id === tab.id) || prev.length >= MAX_PAGES
@@ -140,7 +142,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
 
   async function addImageFromUrl(srcUrl) {
     const file = await imageFileFromUrl(srcUrl);
-    if (!file) return setNotice("Couldn't load that image.");
+    if (!file) return setNotice(t("composer.imageLoadFailed"));
     addFiles([file]);
   }
 
@@ -156,7 +158,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
     const added = await Promise.all(
       accepted.map((file) =>
         fileToAttachment(file).catch(() => {
-          setNotice(`Couldn't read ${file.name}.`);
+          setNotice(t("composer.readFailed", { filename: file.name }));
           return null;
         })
       )
@@ -223,7 +225,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
       {dragging && (
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-zinc-900/90 light:bg-white/90 border-2 border-dashed border-zinc-500 light:border-slate-400 m-2 rounded-2xl pointer-events-none">
           <p className="text-sm text-white light:text-slate-900">
-            Drop files to attach them
+            {t("composer.dropFiles")}
           </p>
         </div>
       )}
@@ -252,7 +254,9 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
               icon={<TabIcon tab={tab} />}
               title={tab.title}
               subtitle={
-                tab.id === activeTab?.id ? "Current page" : hostnameOf(tab.url)
+                tab.id === activeTab?.id
+                  ? t("composer.currentPage")
+                  : hostnameOf(tab.url)
               }
               onRemove={() => removeTab(tab)}
             />
@@ -262,7 +266,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
               icon={
                 <TextAa size={18} className="text-white light:text-slate-700" />
               }
-              title="Selected text"
+              title={t("composer.selectedText")}
               subtitle={selection.title}
               hint={selection.text}
               onRemove={() => setSelection(null)}
@@ -298,7 +302,7 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onBlur={closePicker}
-          placeholder="Ask anything, or type @ to add a tab"
+          placeholder={t("composer.placeholder")}
           className="border-none w-full pt-3 max-h-[200px] leading-5 text-sm text-white light:text-slate-600 bg-transparent placeholder:text-white/60 light:placeholder:text-slate-400 resize-none outline-none"
         />
 
@@ -316,12 +320,12 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
             />
             <ComposerButton
               icon={Plus}
-              label="Attach a file"
+              label={t("composer.attachFile")}
               onClick={() => fileInputRef.current?.click()}
             />
             <ComposerButton
               icon={At}
-              label="Add a tab"
+              label={t("composer.addTab")}
               active={showPicker}
               onMouseDown={(e) => e.preventDefault()}
               onClick={showPicker ? closePicker : openPicker}
@@ -358,11 +362,14 @@ function TabPicker({
   onHighlight,
   onPick,
 }) {
+  const { t } = useTranslation();
   if (full)
-    return <PickerNote text={`You can attach up to ${MAX_PAGES} pages.`} />;
+    return <PickerNote text={t("composer.maxPages", { count: MAX_PAGES })} />;
   if (tabs.length === 0)
     return (
-      <PickerNote text={query ? "No tabs match." : "No other tabs to add."} />
+      <PickerNote
+        text={query ? t("composer.noTabsMatch") : t("composer.noOtherTabs")}
+      />
     );
 
   return tabs.map((tab, i) => (
@@ -421,12 +428,13 @@ function ComposerButton({ icon: Icon, label, active = false, ...props }) {
 }
 
 function SendButton({ streaming, disabled, onSend, onStop }) {
+  const { t } = useTranslation();
   if (streaming)
     return (
       <button
         onClick={onStop}
-        title="Stop"
-        aria-label="Stop"
+        title={t("composer.stop")}
+        aria-label={t("composer.stop")}
         className="border-none flex justify-center items-center rounded-full w-8 h-8 bg-white light:bg-slate-800 hover:opacity-80"
       >
         <div className="w-3.5 h-3.5 rounded-[4px] bg-zinc-800 light:bg-white" />
@@ -437,8 +445,8 @@ function SendButton({ streaming, disabled, onSend, onStop }) {
     <button
       onClick={onSend}
       disabled={disabled}
-      title="Send"
-      aria-label="Send"
+      title={t("composer.send")}
+      aria-label={t("composer.send")}
       className="border-none flex justify-center items-center rounded-full w-8 h-8 bg-white hover:bg-zinc-200 light:bg-slate-800 light:hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-zinc-600 light:disabled:bg-slate-400"
     >
       <ArrowUp
