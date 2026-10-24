@@ -4,6 +4,7 @@ import {
   DotsThreeVertical,
   FolderSimplePlus,
   NotePencil,
+  SidebarSimple,
   SignOut,
   WifiSlash,
 } from "@phosphor-icons/react";
@@ -14,6 +15,7 @@ import ChatMessage from "./ChatMessage";
 import ConnectScreen from "./ConnectScreen";
 import PendingConnectionScreen from "./PendingConnectionScreen";
 import Screen, { PRIMARY_BUTTON, TEXT_BUTTON } from "./Screen";
+import ThreadDrawer from "./ThreadDrawer";
 import UpdateRequired from "./UpdateRequired";
 
 const WORKSPACE_STORAGE_KEY = "chatWorkspaceId";
@@ -34,6 +36,11 @@ export default function SidePanel() {
   const [chatKey, setChatKey] = useState(0);
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  // null, "loading" or "error" while a saved thread is being opened.
+  const [historyStatus, setHistoryStatus] = useState(null);
+  // Bumped on every chat switch so a slow history load can tell it is stale.
+  const chatGeneration = useRef(0);
   const abortController = useRef(null);
   const listRef = useRef(null);
   const bottomRef = useRef(null);
@@ -101,9 +108,37 @@ export default function SidePanel() {
 
   function startNewChat() {
     abortController.current?.abort();
+    chatGeneration.current += 1;
     setMessages([]);
     setThreadId(null);
+    setHistoryStatus(null);
     setChatKey((prev) => prev + 1);
+  }
+
+  async function openThread(id) {
+    setDrawerOpen(false);
+    if (id === threadId && historyStatus !== "error") return;
+    startNewChat();
+    setThreadId(id);
+    setHistoryStatus("loading");
+    const generation = chatGeneration.current;
+    try {
+      const { history, error } = await BrowserExtension.threadHistory(
+        connection,
+        id
+      );
+      if (generation !== chatGeneration.current) return;
+      setHistoryStatus(error ? "error" : null);
+      // Anything sent while the history loaded goes after it.
+      setMessages((prev) => [...historyToMessages(history), ...prev]);
+    } catch (error) {
+      if (error instanceof RevokedKeyError) forgetConnection(REVOKED_NOTICE);
+    }
+  }
+
+  function handleDrawerError(error) {
+    setDrawerOpen(false);
+    if (error instanceof RevokedKeyError) forgetConnection(REVOKED_NOTICE);
   }
 
   function selectWorkspace(id) {
@@ -190,23 +225,7 @@ export default function SidePanel() {
         content: message,
         attachments,
       },
-      {
-        id: replyId,
-        role: "assistant",
-        content: "",
-        thoughts: [],
-        approvals: [],
-        questions: [],
-        charts: [],
-        jobs: [],
-        imagePending: false,
-        routedTo: null,
-        sources: [],
-        outputs: [],
-        metrics: null,
-        error: null,
-        done: false,
-      },
+      emptyReply(replyId),
     ]);
 
     try {
@@ -290,6 +309,9 @@ export default function SidePanel() {
   return (
     <div className="flex flex-col h-screen w-full bg-zinc-900 light:bg-white text-white light:text-slate-900">
       <div className="flex items-center gap-x-2 px-3 py-2.5 border-b border-zinc-800 light:border-slate-200">
+        <HeaderButton label="Threads" onClick={() => setDrawerOpen(true)}>
+          <SidebarSimple size={18} />
+        </HeaderButton>
         <div className="relative flex-1 min-w-0">
           <select
             value={workspaceId ?? ""}
@@ -319,12 +341,7 @@ export default function SidePanel() {
         onScroll={trackScroll}
         className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-y-5"
       >
-        {messages.length === 0 && (
-          <p className="text-sm text-zinc-400 light:text-slate-500 text-center mt-8">
-            Ask about this page or your workspace documents. Type @ to add other
-            tabs.
-          </p>
-        )}
+        {messages.length === 0 && <EmptyChat historyStatus={historyStatus} />}
         {messages.map((message) => (
           <ChatMessage
             key={message.id}
@@ -340,6 +357,18 @@ export default function SidePanel() {
         streaming={streaming}
         onSend={sendMessage}
         onStop={() => abortController.current?.abort()}
+      />
+      <ThreadDrawer
+        open={drawerOpen}
+        connection={connection}
+        workspaceId={workspaceId}
+        workspaceName={
+          workspaces.find((workspace) => workspace.id === workspaceId)?.name
+        }
+        activeThreadId={threadId}
+        onSelect={openThread}
+        onClose={() => setDrawerOpen(false)}
+        onError={handleDrawerError}
       />
     </div>
   );
@@ -417,6 +446,76 @@ function normalizeOutput(output) {
   if (output.type === "imageGenerationCard")
     return { type: "image", ...output.payload };
   return { type: "file", ...(output.payload ?? output) };
+}
+
+/**
+ * A fresh assistant reply before any of its stream has arrived.
+ * @param {string} id
+ */
+function emptyReply(id) {
+  return {
+    id,
+    role: "assistant",
+    content: "",
+    thoughts: [],
+    approvals: [],
+    questions: [],
+    charts: [],
+    jobs: [],
+    imagePending: false,
+    routedTo: null,
+    sources: [],
+    outputs: [],
+    metrics: null,
+    error: null,
+    done: false,
+  };
+}
+
+/**
+ * Turns a saved thread's history into panel messages.
+ * @param {object[]} history - as returned by AnythingLLM's chat history
+ */
+function historyToMessages(history) {
+  return history.map((entry) => {
+    if (entry.role === "user")
+      return {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: entry.content,
+        attachments: (entry.attachments ?? []).map((attachment) => ({
+          ...attachment,
+          id: crypto.randomUUID(),
+        })),
+      };
+    return addOutputs(
+      {
+        ...emptyReply(crypto.randomUUID()),
+        content: entry.content,
+        sources: entry.sources ?? [],
+        metrics: entry.metrics ?? null,
+        done: true,
+      },
+      Array.isArray(entry.outputs) ? entry.outputs : []
+    );
+  });
+}
+
+function EmptyChat({ historyStatus }) {
+  if (historyStatus === "loading") return <ChatNote text="Loading chat..." />;
+  if (historyStatus === "error")
+    return <ChatNote text="Couldn't load this chat." />;
+  return (
+    <ChatNote text="Ask about this page or your workspace documents. Type @ to add other tabs." />
+  );
+}
+
+function ChatNote({ text }) {
+  return (
+    <p className="text-sm text-zinc-400 light:text-slate-500 text-center mt-8">
+      {text}
+    </p>
+  );
 }
 
 function HeaderButton({ label, onClick, children }) {

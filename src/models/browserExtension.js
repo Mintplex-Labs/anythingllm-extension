@@ -8,6 +8,21 @@ export class RevokedKeyError extends Error {
   }
 }
 
+/**
+ * A 403 means either the key was deleted or the workspace is out of reach for
+ * it, so /check decides which one before the panel drops the connection.
+ * @param {string} apiBase
+ * @param {string} apiKey
+ * @param {Response} response - the 403 response
+ * @returns {Promise<Error>}
+ */
+async function forbiddenError(apiBase, apiKey, response) {
+  const { revoked } = await BrowserExtension.workspaces(apiBase, apiKey);
+  if (revoked) return new RevokedKeyError();
+  const { error } = await response.json().catch(() => ({}));
+  return new Error(error || "AnythingLLM refused this request.");
+}
+
 const BrowserExtension = {
   checkApiKey: async function (apiBase, apiKey) {
     return await fetch(`${apiBase}/browser-extension/check`, {
@@ -109,8 +124,9 @@ const BrowserExtension = {
       },
       body: JSON.stringify({ workspaceId }),
     })
-      .then((res) => {
-        if (res.status === 403) throw new RevokedKeyError();
+      .then(async (res) => {
+        if (res.status === 403)
+          throw await forbiddenError(apiBase, apiKey, res);
         if (!res.ok) throw new Error("Could not start a thread");
         return res.json();
       })
@@ -118,6 +134,56 @@ const BrowserExtension = {
       .catch((e) => {
         if (e instanceof RevokedKeyError) throw e;
         return { threadId: null, error: e.message };
+      });
+  },
+
+  /**
+   * Lists the threads this key's user has in a workspace, oldest first.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {number} workspaceId
+   * @returns {Promise<{threads: {id: number, name: string}[], error: string|null}>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
+   */
+  threads: async function ({ apiBase, apiKey }, workspaceId) {
+    return await fetch(
+      `${apiBase}/browser-extension/threads?workspaceId=${Number(workspaceId)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    )
+      .then(async (res) => {
+        if (res.status === 403)
+          throw await forbiddenError(apiBase, apiKey, res);
+        if (!res.ok) throw new Error("Could not load threads");
+        return res.json();
+      })
+      .then((data) => ({ threads: data.threads ?? [], error: null }))
+      .catch((e) => {
+        if (e instanceof RevokedKeyError) throw e;
+        return { threads: [], error: e.message };
+      });
+  },
+
+  /**
+   * Loads the messages saved in a thread, in the shape the app's chat history uses.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @param {number} threadId
+   * @returns {Promise<{history: object[], error: string|null}>}
+   * @throws {RevokedKeyError} when the key no longer exists in AnythingLLM
+   */
+  threadHistory: async function ({ apiBase, apiKey }, threadId) {
+    return await fetch(
+      `${apiBase}/browser-extension/threads/${Number(threadId)}/chats`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    )
+      .then(async (res) => {
+        if (res.status === 403)
+          throw await forbiddenError(apiBase, apiKey, res);
+        if (!res.ok) throw new Error("Could not load this chat");
+        return res.json();
+      })
+      .then((data) => ({ history: data.history ?? [], error: null }))
+      .catch((e) => {
+        if (e instanceof RevokedKeyError) throw e;
+        return { history: [], error: e.message };
       });
   },
 
@@ -143,7 +209,8 @@ const BrowserExtension = {
       body: JSON.stringify(body),
       signal,
     });
-    if (response.status === 403) throw new RevokedKeyError();
+    if (response.status === 403)
+      throw await forbiddenError(apiBase, apiKey, response);
     if (!response.ok) {
       const { error } = await response.json().catch(() => ({}));
       throw new Error(error || "Failed to send message");
