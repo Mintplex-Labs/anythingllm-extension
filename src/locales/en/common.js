@@ -58,6 +58,13 @@ const TRANSLATIONS = {
       description: "The language the extension is shown in.",
       browser: "Use browser language",
     },
+    theme: {
+      title: "Theme",
+      description: "How the extension looks.",
+      system: "System",
+      light: "Light",
+      dark: "Dark",
+    },
   },
   threads: {
     title: "Threads",

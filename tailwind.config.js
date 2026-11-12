@@ -16,7 +16,8 @@ export default {
   },
   plugins: [
     function ({ addVariant }) {
-      addVariant("light", "@media (prefers-color-scheme: light)")
+      // Follows the theme picked in settings (see utils/theme.js).
+      addVariant("light", '[data-theme="light"] &')
     },
     // Enter/exit animation utilities (`animate-in`, `fade-in-0`, ...) as
     // defined by `tailwindcss-animate`, used by the chain of thought.

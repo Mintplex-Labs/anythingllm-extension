@@ -23,10 +23,13 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    background-color: #ffffff;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  background-color: #ffffff;
 }
 
 /* Chrome gives extension pages a default body font, so set it here too. */

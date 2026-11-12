@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import BrowserExtension, { RevokedKeyError } from "@/models/browserExtension";
 import { isServerOutdated, updateUrl } from "@/utils/serverVersion";
+import useTheme from "@/hooks/useTheme";
 import ChatComposer from "./ChatComposer";
 import ChatMessage from "./ChatMessage";
 import ConnectScreen from "./ConnectScreen";
@@ -25,6 +26,8 @@ const WORKSPACE_STORAGE_KEY = "chatWorkspaceId";
 
 export default function SidePanel() {
   const { t } = useTranslation();
+  // Re-renders the panel on a theme switch so charts pick up the new colors.
+  useTheme();
   const [status, setStatus] = useState("loading");
   const [connection, setConnection] = useState(null);
   // Why the last connection ended, shown on the connect screen.
