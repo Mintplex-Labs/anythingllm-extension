@@ -14,23 +14,36 @@ import {
 } from "@/utils/attachments";
 import useFileDrop from "@/hooks/useFileDrop";
 import useSessionHandoff from "@/hooks/useSessionHandoff";
+import BrowserExtension from "@/models/browserExtension";
 import ContextCard from "../ContextCard";
 import AttachmentCard from "../AttachmentCard";
 import MicButton from "./MicButton";
 
 const MENTION_PATTERN = /(?:^|\s)@([^\s@]*)$/;
+// The command menu opens while the message is a lone command being typed.
+const SLASH_PATTERN = /^\/(\S*)$/;
+const RESET_COMMAND = "/reset";
 const MAX_PAGES = 5;
 
 /**
  * Message input that gathers page context: the current page, tabs added
  * from the @ picker, text sent from the "Ask AnythingLLM about this" menu item,
- * and files dropped, pasted or picked.
+ * and files dropped, pasted or picked. Typing / opens the user's slash
+ * command presets, which the server expands when the message is sent.
  * @param {Object} props
+ * @param {{apiBase: string, apiKey: string}} props.connection
  * @param {boolean} props.streaming
  * @param {(message: string, pages: {title: string, url: string, content: string}[], attachments: import("@/utils/attachments").Attachment[]) => void} props.onSend
  * @param {() => void} props.onStop
+ * @param {() => void} props.onReset - /reset starts a new chat
  */
-export default function ChatComposer({ streaming, onSend, onStop }) {
+export default function ChatComposer({
+  connection,
+  streaming,
+  onSend,
+  onStop,
+  onReset,
+}) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const [activeTab, setActiveTab] = useState(null);
@@ -45,12 +58,24 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   // Text the user dismissed the picker for, so "ask @bob" stays typed without reopening it.
   const [dismissedText, setDismissedText] = useState(null);
   const [highlighted, setHighlighted] = useState(0);
+  const [presets, setPresets] = useState([]);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const dragging = useFileDrop(addFiles);
 
+  const slash = text.match(SLASH_PATTERN);
+  const showCommands = !!slash && dismissedText !== text;
+  const commandQuery = `/${slash?.[1] ?? ""}`.toLowerCase();
+  const commandChoices = showCommands
+    ? [
+        { command: RESET_COMMAND, description: t("composer.commands.reset") },
+        ...presets,
+      ].filter((c) => c.command.toLowerCase().startsWith(commandQuery))
+    : [];
+
   const mention = text.match(MENTION_PATTERN);
-  const showPicker = pickerOpen || (!!mention && dismissedText !== text);
+  const showPicker =
+    !showCommands && (pickerOpen || (!!mention && dismissedText !== text));
   const query = (mention?.[1] ?? "").toLowerCase();
 
   // A selection stands in for the page it came from.
@@ -67,7 +92,8 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
             `${tab.title} ${tab.url}`.toLowerCase().includes(query)
           )
       : [];
-  const highlightedIndex = Math.min(highlighted, tabChoices.length - 1);
+  const menuChoices = showCommands ? commandChoices : tabChoices;
+  const highlightedIndex = Math.min(highlighted, menuChoices.length - 1);
 
   useEffect(() => {
     const refreshActiveTab = () =>
@@ -108,6 +134,18 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
       .then((tabs) => setOpenTabs(tabs.filter(isReadable)));
   }, [showPicker, query]);
 
+  useEffect(() => {
+    setHighlighted(0);
+  }, [commandQuery]);
+
+  // Presets are edited in the app, so they are reloaded each time the menu opens.
+  useEffect(() => {
+    if (!showCommands) return;
+    BrowserExtension.slashCommandPresets(connection).then(({ presets }) =>
+      setPresets(presets)
+    );
+  }, [showCommands]);
+
   function openPicker() {
     setPickerOpen(true);
     textareaRef.current?.focus();
@@ -116,6 +154,15 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   function closePicker() {
     setPickerOpen(false);
     setDismissedText(text);
+  }
+
+  function pickCommand({ command }) {
+    if (command === RESET_COMMAND) {
+      setText("");
+      return onReset();
+    }
+    setText(`${command} `);
+    textareaRef.current?.focus();
   }
 
   function addTab(tab) {
@@ -186,26 +233,31 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
   async function submit() {
     const message = text.trim();
     if (!message || streaming) return;
+    if (message.toLowerCase() === RESET_COMMAND) {
+      setText("");
+      return onReset();
+    }
     setText("");
     setAttachments([]);
     onSend(message, await gatherPages(), attachments);
   }
 
   function handleKeyDown(e) {
-    if (showPicker) {
+    if (showPicker || showCommands) {
       if (e.key === "Escape") return closePicker();
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        if (tabChoices.length === 0) return;
+        if (menuChoices.length === 0) return;
         const step = e.key === "ArrowDown" ? 1 : -1;
         return setHighlighted(
-          (highlightedIndex + step + tabChoices.length) % tabChoices.length
+          (highlightedIndex + step + menuChoices.length) % menuChoices.length
         );
       }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        if (tabChoices.length === 0) return closePicker();
-        return addTab(tabChoices[highlightedIndex]);
+        if (menuChoices.length === 0) return closePicker();
+        const choice = menuChoices[highlightedIndex];
+        return showCommands ? pickCommand(choice) : addTab(choice);
       }
     }
     if (e.key !== "Enter" || e.shiftKey) return;
@@ -230,19 +282,28 @@ export default function ChatComposer({ streaming, onSend, onStop }) {
         </div>
       )}
 
-      {showPicker && (
+      {(showPicker || showCommands) && (
         <div
           onMouseDown={(e) => e.preventDefault()}
           className="absolute bottom-full left-3 right-3 mb-2 max-h-[260px] overflow-y-auto bg-zinc-800 light:bg-white border border-zinc-700 light:border-slate-300 rounded-2xl shadow-lg p-2"
         >
-          <TabPicker
-            tabs={tabChoices}
-            query={query}
-            full={pageCount >= MAX_PAGES}
-            highlightedIndex={highlightedIndex}
-            onHighlight={setHighlighted}
-            onPick={addTab}
-          />
+          {showCommands ? (
+            <CommandPicker
+              commands={commandChoices}
+              highlightedIndex={highlightedIndex}
+              onHighlight={setHighlighted}
+              onPick={pickCommand}
+            />
+          ) : (
+            <TabPicker
+              tabs={tabChoices}
+              query={query}
+              full={pageCount >= MAX_PAGES}
+              highlightedIndex={highlightedIndex}
+              onHighlight={setHighlighted}
+              onPick={addTab}
+            />
+          )}
         </div>
       )}
 
@@ -393,6 +454,35 @@ function TabPicker({
           {hostnameOf(tab.url)}
         </span>
       </div>
+    </button>
+  ));
+}
+
+function CommandPicker({ commands, highlightedIndex, onHighlight, onPick }) {
+  const { t } = useTranslation();
+  if (commands.length === 0)
+    return <PickerNote text={t("composer.commands.noMatch")} />;
+
+  return commands.map((command, i) => (
+    <button
+      key={command.command}
+      ref={i === highlightedIndex ? scrollIntoView : null}
+      onClick={() => onPick(command)}
+      onMouseEnter={() => onHighlight(i)}
+      className={`border-none w-full flex flex-col text-left rounded-xl px-2 py-2 ${
+        i === highlightedIndex
+          ? "bg-zinc-700 light:bg-slate-100"
+          : "bg-transparent"
+      }`}
+    >
+      <span className="text-sm text-white light:text-slate-900 truncate max-w-full">
+        {command.command}
+      </span>
+      {!!command.description && (
+        <span className="text-xs text-zinc-400 light:text-slate-500 truncate max-w-full">
+          {command.description}
+        </span>
+      )}
     </button>
   ));
 }

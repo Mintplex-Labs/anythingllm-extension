@@ -369,9 +369,11 @@ export default function SidePanel() {
 
       <ChatComposer
         key={chatKey}
+        connection={connection}
         streaming={streaming}
         onSend={sendMessage}
         onStop={() => abortController.current?.abort()}
+        onReset={startNewChat}
       />
       <ThreadDrawer
         open={drawerOpen}

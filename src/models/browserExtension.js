@@ -302,6 +302,26 @@ const BrowserExtension = {
       .catch((e) => ({ success: false, error: e.message }));
   },
 
+  /**
+   * Lists the slash command presets this key's user made in AnythingLLM.
+   * @param {{apiBase: string, apiKey: string}} connection
+   * @returns {Promise<{presets: {id: number, command: string, description: string}[], error: string|null}>}
+   */
+  slashCommandPresets: async function ({ apiBase, apiKey }) {
+    return await fetch(`${apiBase}/browser-extension/slash-command-presets`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(i18n.t("errors.loadCommands"));
+        return res.json();
+      })
+      .then((data) => ({
+        presets: Array.isArray(data.presets) ? data.presets : [],
+        error: null,
+      }))
+      .catch((e) => ({ presets: [], error: e.message }));
+  },
+
   disconnect: async function (apiBase, apiKey) {
     try {
       await fetch(`${apiBase}/browser-extension/disconnect`, {

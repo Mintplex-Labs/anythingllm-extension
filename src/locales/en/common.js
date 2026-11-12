@@ -108,7 +108,7 @@ const TRANSLATIONS = {
       },
     },
     intro:
-      "Ask about this page or your workspace documents. Type @ to add other tabs.",
+      "Ask about this page or your workspace documents. Type @ to add other tabs or / for commands.",
     loading: "Loading chat...",
     loadFailed: "Couldn't load this chat.",
     thinking: "Thinking...",
@@ -135,6 +135,10 @@ const TRANSLATIONS = {
     maxPages: "You can attach up to {{count}} pages.",
     noTabsMatch: "No tabs match.",
     noOtherTabs: "No other tabs to add.",
+    commands: {
+      reset: "Start a new chat",
+      noMatch: "No matching commands. Add presets in AnythingLLM.",
+    },
     readFailed: "Couldn't read {{filename}}.",
     pageUnreadable: "AnythingLLM can't read this page.",
     imageLoadFailed: "Couldn't load that image.",
@@ -198,6 +202,7 @@ const TRANSLATIONS = {
     refused: "AnythingLLM refused this request.",
     startThread: "Could not start a thread",
     loadThreads: "Could not load threads",
+    loadCommands: "Could not load slash commands",
     loadChat: "Could not load this chat",
     sendMessage: "Failed to send message",
     loadFile: "Could not load file",
