@@ -46,10 +46,9 @@ export default function ChatComposer({
 }) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
+  // Offered as a one-click chip above the prompt rather than attached up front.
   const [activeTab, setActiveTab] = useState(null);
-  // Removing the current page card keeps it off until a new chat.
-  const [activeTabDismissed, setActiveTabDismissed] = useState(false);
-  const [mentionedTabs, setMentionedTabs] = useState([]);
+  const [attachedTabs, setAttachedTabs] = useState([]);
   const [selection, setSelection] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [notice, setNotice] = useState(null);
@@ -78,12 +77,13 @@ export default function ChatComposer({
     !showCommands && (pickerOpen || (!!mention && dismissedText !== text));
   const query = (mention?.[1] ?? "").toLowerCase();
 
-  // A selection stands in for the page it came from.
-  const includeActiveTab = !!activeTab && !activeTabDismissed && !selection;
-  const attachedTabs = includeActiveTab
-    ? [activeTab, ...mentionedTabs.filter((t) => t.id !== activeTab.id)]
-    : mentionedTabs;
   const pageCount = attachedTabs.length + (selection ? 1 : 0);
+  const suggestedTab =
+    !!activeTab &&
+    pageCount < MAX_PAGES &&
+    !attachedTabs.some((t) => t.id === activeTab.id)
+      ? activeTab
+      : null;
   const tabChoices =
     showPicker && pageCount < MAX_PAGES
       ? openTabs
@@ -166,25 +166,27 @@ export default function ChatComposer({
   }
 
   function addTab(tab) {
-    setMentionedTabs((prev) => [...prev, tab]);
+    setAttachedTabs((prev) => [...prev, tab]);
     setPickerOpen(false);
     setText((prev) =>
       prev.replace(MENTION_PATTERN, (m) => (m.startsWith("@") ? "" : m[0]))
     );
   }
 
-  // "Chat with page" from the context menu: attach that tab even if the
-  // current page card was removed or a selection is standing in for it.
-  async function attachPage(tabId) {
-    const tab = await chrome.tabs.get(tabId).catch(() => null);
-    if (!isReadable(tab)) return setNotice(t("composer.pageUnreadable"));
-    setActiveTabDismissed(false);
-    setMentionedTabs((prev) =>
+  // Used by the current page chip and "Chat with page" from the context menu.
+  function attachTab(tab) {
+    setAttachedTabs((prev) =>
       prev.some((t) => t.id === tab.id) || prev.length >= MAX_PAGES
         ? prev
         : [...prev, tab]
     );
     textareaRef.current?.focus();
+  }
+
+  async function attachPage(tabId) {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!isReadable(tab)) return setNotice(t("composer.pageUnreadable"));
+    attachTab(tab);
   }
 
   async function addImageFromUrl(srcUrl) {
@@ -194,8 +196,7 @@ export default function ChatComposer({
   }
 
   function removeTab(tab) {
-    if (tab.id === activeTab?.id) setActiveTabDismissed(true);
-    setMentionedTabs((prev) => prev.filter((t) => t.id !== tab.id));
+    setAttachedTabs((prev) => prev.filter((t) => t.id !== tab.id));
   }
 
   async function addFiles(files) {
@@ -305,6 +306,13 @@ export default function ChatComposer({
             />
           )}
         </div>
+      )}
+
+      {!!suggestedTab && (
+        <SuggestedTab
+          tab={suggestedTab}
+          onAdd={() => attachTab(suggestedTab)}
+        />
       )}
 
       <div className="bg-zinc-800 light:bg-white light:border light:border-slate-300 rounded-[20px] flex flex-col px-4 overflow-hidden">
@@ -544,6 +552,30 @@ function SendButton({ streaming, disabled, onSend, onStop }) {
         weight="bold"
         className="text-zinc-800 light:text-white"
       />
+    </button>
+  );
+}
+
+/**
+ * One-click offer to attach the page the user is on.
+ * @param {Object} props
+ * @param {chrome.tabs.Tab} props.tab
+ * @param {() => void} props.onAdd
+ */
+function SuggestedTab({ tab, onAdd }) {
+  const { t } = useTranslation();
+  const label = t("composer.addCurrentPage", { title: tab.title });
+  return (
+    <button
+      onClick={onAdd}
+      onMouseDown={(e) => e.preventDefault()}
+      title={label}
+      aria-label={label}
+      className="border-none mb-2 flex items-center gap-x-1.5 max-w-full w-fit rounded-full pl-2 pr-3 py-1 bg-zinc-800 light:bg-slate-100 hover:bg-zinc-700 light:hover:bg-slate-200 text-xs text-zinc-300 light:text-slate-600 hover:text-white light:hover:text-slate-900"
+    >
+      <Plus size={12} weight="bold" className="shrink-0" />
+      <TabIcon tab={tab} />
+      <span className="truncate">{tab.title}</span>
     </button>
   );
 }

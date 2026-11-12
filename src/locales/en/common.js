@@ -127,6 +127,7 @@ const TRANSLATIONS = {
     placeholder: "Ask anything, or type @ to add a tab",
     dropFiles: "Drop files to attach them",
     currentPage: "Current page",
+    addCurrentPage: "Add {{title}} to the chat",
     selectedText: "Selected text",
     attachFile: "Attach a file",
     addTab: "Add a tab",
