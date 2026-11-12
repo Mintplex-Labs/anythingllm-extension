@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AnythingLLM Browser Companion",
   "version": "1.1.0",
-  "description": "Bring AnythingLLM directly into your browser to curate and collect content on the web directly into your AnythingLLM workspaces.",
+  "description": "Chat with your AnythingLLM workspaces from a side panel, using the page you're on as context, and save web content to them.",
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
@@ -11,7 +11,6 @@
   },
   "permissions": [
     "contextMenus",
-    "activeTab",
     "storage",
     "alarms",
     "sidePanel",
