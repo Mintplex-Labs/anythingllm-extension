@@ -3,7 +3,7 @@ import { Brain } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import AgentAnimation from "@/media/animations/agent-animation.webm";
 import AgentStatic from "@/media/animations/agent-static.png";
-import { renderMarkdown } from "@/utils/markdown";
+import { renderThoughtMarkdown } from "@/utils/markdown";
 import { formatDuration } from "@/utils/numbers";
 import {
   ChainOfThought,
@@ -76,7 +76,7 @@ export default function Thoughts({ nodes, streaming }) {
                   <div
                     className="break-words [&_p]:mb-1 [&_p:last-child]:mb-0"
                     dangerouslySetInnerHTML={{
-                      __html: renderMarkdown(node.content),
+                      __html: renderThoughtMarkdown(node.content),
                     }}
                   />
                 ) : (

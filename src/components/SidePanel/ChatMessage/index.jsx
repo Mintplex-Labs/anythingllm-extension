@@ -21,8 +21,10 @@ import Metrics from "./Metrics";
 
 const MARKDOWN_CLASSES =
   "text-sm leading-relaxed break-words text-white light:text-slate-900 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 [&_li]:mb-1 [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_a]:text-sky-400 light:[&_a]:text-sky-600 [&_a]:underline [&_pre]:bg-zinc-800 light:[&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-2 [&_code]:font-mono [&_code]:text-xs";
-// Reasoning models wrap their thinking in tags; an unclosed tag means it is still streaming.
-const THINK_PATTERN = /<(think|thinking|thought)>([\s\S]*?)(?:<\/\1>|$)/g;
+// Reasoning models wrap their thinking in tags, sometimes with attributes, using
+// the same tag names the main app recognizes. An unclosed tag means it is still streaming.
+const THINK_PATTERN =
+  /<(think|thinking|thought|thought_chain)(?:\s[^>]*)?>([\s\S]*?)(?:<\/\1\s*>|$)/g;
 
 /**
  * @param {Object} props

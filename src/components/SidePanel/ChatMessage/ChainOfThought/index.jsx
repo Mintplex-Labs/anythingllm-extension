@@ -92,7 +92,7 @@ export function ChainOfThoughtHeader({
       {icon ?? <Brain className="size-4 flex-shrink-0 mt-0.5" />}
       <span
         className={cn(
-          "min-w-0 break-words text-left",
+          "min-w-0 truncate text-left",
           pending &&
             "animate-shimmer bg-[length:200%_100%] bg-clip-text text-transparent bg-[linear-gradient(90deg,theme(colors.zinc.500),theme(colors.zinc.100),theme(colors.zinc.500))] light:bg-[linear-gradient(90deg,theme(colors.zinc.400),theme(colors.zinc.900),theme(colors.zinc.400))]"
         )}
