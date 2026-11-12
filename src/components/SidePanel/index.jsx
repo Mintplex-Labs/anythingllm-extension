@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import BrowserExtension, { RevokedKeyError } from "@/models/browserExtension";
 import { isServerOutdated, updateUrl } from "@/utils/serverVersion";
 import useTheme from "@/hooks/useTheme";
+import useGreeting from "@/hooks/useGreeting";
 import ChatComposer from "./ChatComposer";
 import ChatMessage from "./ChatMessage";
 import ConnectScreen from "./ConnectScreen";
@@ -521,7 +522,22 @@ function EmptyChat({ historyStatus }) {
   if (historyStatus === "loading") return <ChatNote text={t("chat.loading")} />;
   if (historyStatus === "error")
     return <ChatNote text={t("chat.loadFailed")} />;
-  return <ChatNote text={t("chat.intro")} />;
+  return <Greeting />;
+}
+
+function Greeting() {
+  const { t } = useTranslation();
+  const greeting = useGreeting();
+  return (
+    <div className="my-auto flex flex-col items-center gap-y-3 text-center px-2">
+      <h1 className="m-0 font-clash font-medium text-2xl text-white light:text-slate-900">
+        {greeting}
+      </h1>
+      <p className="m-0 text-sm text-zinc-400 light:text-slate-500">
+        {t("chat.intro")}
+      </p>
+    </div>
+  );
 }
 
 function ChatNote({ text }) {

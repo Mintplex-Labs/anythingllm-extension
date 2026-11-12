@@ -3,6 +3,9 @@ export default {
   content: ["./index.html", "./sidepanel.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        clash: ["clash-display", "ui-sans-serif", "system-ui", "sans-serif"]
+      },
       animation: {
         shimmer: "shimmer 3s linear infinite"
       },

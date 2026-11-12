@@ -8,6 +8,13 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "clash-display";
+  src: url("/fonts/ClashDisplay-Variable.woff2") format("woff2");
+  font-weight: 200 700;
+  font-display: swap;
+}
+
 :root {
   font-family: "plus-jakarta-sans", system-ui, Helvetica, Arial, sans-serif;
   line-height: 1.5;
