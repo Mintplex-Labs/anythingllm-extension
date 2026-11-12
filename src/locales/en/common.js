@@ -39,6 +39,8 @@ const TRANSLATIONS = {
       "Chat from the extension needs AnythingLLM {{version}} or newer. Update your instance, then check again.",
     download: "Get the latest version",
     retry: "Check again",
+    continue: "Continue anyway",
+    continueHint: "Some features may not work until AnythingLLM is updated.",
   },
   noWorkspaces: {
     title: "No workspaces yet",

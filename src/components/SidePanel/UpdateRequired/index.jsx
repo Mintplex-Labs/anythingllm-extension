@@ -8,7 +8,20 @@ import Screen, {
   TEXT_BUTTON,
 } from "../Screen";
 
-export default function UpdateRequired({ updateUrl, onRetry, onDisconnect }) {
+/**
+ * Shown when the connected AnythingLLM is older than the extension needs.
+ * @param {Object} props
+ * @param {string} props.updateUrl
+ * @param {() => void} props.onRetry
+ * @param {() => void} props.onContinue - use the extension anyway; some features may not work
+ * @param {() => void} props.onDisconnect
+ */
+export default function UpdateRequired({
+  updateUrl,
+  onRetry,
+  onContinue,
+  onDisconnect,
+}) {
   const { t } = useTranslation();
   return (
     <Screen
@@ -26,6 +39,13 @@ export default function UpdateRequired({ updateUrl, onRetry, onDisconnect }) {
       </a>
       <button onClick={onRetry} className={SECONDARY_BUTTON}>
         {t("update.retry")}
+      </button>
+      <button
+        onClick={onContinue}
+        title={t("update.continueHint")}
+        className={TEXT_BUTTON}
+      >
+        {t("update.continue")}
       </button>
       <button onClick={onDisconnect} className={TEXT_BUTTON}>
         {t("common.disconnect")}

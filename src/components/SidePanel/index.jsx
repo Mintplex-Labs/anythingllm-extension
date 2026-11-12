@@ -24,6 +24,7 @@ import ThreadDrawer from "./ThreadDrawer";
 import UpdateRequired from "./UpdateRequired";
 
 const WORKSPACE_STORAGE_KEY = "chatWorkspaceId";
+const OUTDATED_DISMISSED_STORAGE_KEY = "outdatedServerDismissed";
 
 export default function SidePanel() {
   const { t } = useTranslation();
@@ -44,6 +45,8 @@ export default function SidePanel() {
   const [streaming, setStreaming] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Server and version the update screen is showing for, so "Continue anyway" can remember it.
+  const [outdatedDismissal, setOutdatedDismissal] = useState(null);
   // null, "loading" or "error" while a saved thread is being opened.
   const [historyStatus, setHistoryStatus] = useState(null);
   // Bumped on every chat switch so a slow history load can tell it is stale.
@@ -97,11 +100,22 @@ export default function SidePanel() {
       await Promise.all([
         BrowserExtension.workspaces(apiBase, apiKey),
         BrowserExtension.serverVersion(apiBase),
-        chrome.storage.local.get(WORKSPACE_STORAGE_KEY),
+        chrome.storage.local.get([
+          WORKSPACE_STORAGE_KEY,
+          OUTDATED_DISMISSED_STORAGE_KEY,
+        ]),
       ]);
     if (revoked) return forgetConnection(t("connect.revoked"));
     if (error) return setStatus("offline");
-    if (isServerOutdated(version)) return setStatus("outdated");
+    // "Continue anyway" holds for this server at this version only.
+    const dismissal = `${apiBase}@${version ?? "unknown"}`;
+    if (
+      isServerOutdated(version) &&
+      stored[OUTDATED_DISMISSED_STORAGE_KEY] !== dismissal
+    ) {
+      setOutdatedDismissal(dismissal);
+      return setStatus("outdated");
+    }
 
     const savedId = stored[WORKSPACE_STORAGE_KEY];
     setWorkspaces(workspaces);
@@ -296,6 +310,12 @@ export default function SidePanel() {
       <UpdateRequired
         updateUrl={updateUrl(connection.apiBase)}
         onRetry={loadWorkspaces}
+        onContinue={async () => {
+          await chrome.storage.local.set({
+            [OUTDATED_DISMISSED_STORAGE_KEY]: outdatedDismissal,
+          });
+          loadWorkspaces();
+        }}
         onDisconnect={disconnect}
       />
     );
