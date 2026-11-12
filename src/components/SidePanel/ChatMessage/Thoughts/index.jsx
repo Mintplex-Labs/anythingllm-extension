@@ -49,11 +49,19 @@ export default function Thoughts({ nodes, streaming }) {
           />
         }
         pending={streaming}
+        trailing={
+          streaming && arrivals[0] ? (
+            <>
+              · <ElapsedTime since={arrivals[0]} />
+            </>
+          ) : null
+        }
       >
         {headerLabel}
       </ChainOfThoughtHeader>
       <ChainOfThoughtContent>
         {nodes.map((node, index) => {
+          const isActiveStep = streaming && index === nodes.length - 1;
           const start = arrivals[index];
           const end = arrivals[index + 1] ?? finalizedAt;
           const seconds =
@@ -62,9 +70,7 @@ export default function Thoughts({ nodes, streaming }) {
             <ChainOfThoughtStep
               key={index}
               icon={node.type === "thought" ? Brain : undefined}
-              status={
-                streaming && index === nodes.length - 1 ? "active" : "complete"
-              }
+              status={isActiveStep ? "active" : "complete"}
               label={
                 node.type === "thought" ? (
                   <div
@@ -77,13 +83,35 @@ export default function Thoughts({ nodes, streaming }) {
                   cleanStatus(node.content)
                 )
               }
-              description={seconds ? formatDuration(seconds) : undefined}
+              description={
+                isActiveStep && start ? (
+                  <ElapsedTime since={start} />
+                ) : seconds ? (
+                  formatDuration(seconds)
+                ) : undefined
+              }
             />
           );
         })}
       </ChainOfThoughtContent>
     </ChainOfThought>
   );
+}
+
+/**
+ * Live count of how long the chain or a step has been running. Re-renders
+ * each second and derives from Date.now() so a throttled panel catches up
+ * instead of drifting.
+ * @param {{since: number}} props - epoch ms the count starts from
+ */
+function ElapsedTime({ since }) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const seconds = Math.max(0, Math.floor((now - since) / 1000));
+  return seconds < 60 ? `${seconds}s` : formatDuration(seconds);
 }
 
 function labelFor({ thinking, streaming, lastNode, totalDuration, t }) {
