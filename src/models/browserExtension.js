@@ -1,5 +1,4 @@
 import i18n from "@/i18n";
-import { isLightMode } from "@/utils/theme";
 
 // AnythingLLM answered 403: the API key was deleted there.
 export class RevokedKeyError extends Error {
@@ -64,9 +63,15 @@ const BrowserExtension = {
       .catch((e) => ({ version: null, error: e.message }));
   },
 
-  fetchLogo: async function (apiBase) {
+  /**
+   * The instance's custom logo if one was uploaded, otherwise the default
+   * AnythingLLM logo for the theme. The route is public, so no key is sent.
+   * @param {string} apiBase
+   * @param {"light"|"dark"} theme
+   * @returns {Promise<{success: boolean, error: string|null, logoURL: string|null}>} logoURL is an object URL the caller owns
+   */
+  fetchLogo: async function (apiBase, theme) {
     try {
-      const theme = isLightMode() ? "light" : "dark";
       const response = await fetch(`${apiBase}/system/logo?theme=${theme}`, {
         method: "GET",
         cache: "no-cache",

@@ -109,6 +109,7 @@ const TRANSLATIONS = {
         still_up: "Still up? Ready when you are.",
       },
     },
+    logo: "Logo",
     intro:
       "Ask about this page or your workspace documents. Type @ to add other tabs or / for commands.",
     loading: "Loading chat...",

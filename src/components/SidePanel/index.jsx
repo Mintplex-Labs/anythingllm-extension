@@ -14,6 +14,7 @@ import BrowserExtension, { RevokedKeyError } from "@/models/browserExtension";
 import { isServerOutdated, updateUrl } from "@/utils/serverVersion";
 import useTheme from "@/hooks/useTheme";
 import useGreeting from "@/hooks/useGreeting";
+import useLogo from "@/hooks/useLogo";
 import ChatComposer from "./ChatComposer";
 import ChatMessage from "./ChatMessage";
 import ConnectScreen from "./ConnectScreen";
@@ -29,9 +30,10 @@ const OUTDATED_DISMISSED_STORAGE_KEY = "outdatedServerDismissed";
 export default function SidePanel() {
   const { t } = useTranslation();
   // Re-renders the panel on a theme switch so charts pick up the new colors.
-  useTheme();
+  const theme = useTheme();
   const [status, setStatus] = useState("loading");
   const [connection, setConnection] = useState(null);
+  const logoURL = useLogo(connection?.apiBase ?? null, theme);
   // Why the last connection ended, shown on the connect screen.
   const [notice, setNotice] = useState(null);
   // A connection string an AnythingLLM page handed over, waiting for approval.
@@ -376,7 +378,9 @@ export default function SidePanel() {
         onScroll={trackScroll}
         className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-y-5"
       >
-        {messages.length === 0 && <EmptyChat historyStatus={historyStatus} />}
+        {messages.length === 0 && (
+          <EmptyChat historyStatus={historyStatus} logoURL={logoURL} />
+        )}
         {messages.map((message) => (
           <ChatMessage
             key={message.id}
@@ -539,19 +543,26 @@ function historyToMessages(history) {
   });
 }
 
-function EmptyChat({ historyStatus }) {
+function EmptyChat({ historyStatus, logoURL }) {
   const { t } = useTranslation();
   if (historyStatus === "loading") return <ChatNote text={t("chat.loading")} />;
   if (historyStatus === "error")
     return <ChatNote text={t("chat.loadFailed")} />;
-  return <Greeting />;
+  return <Greeting logoURL={logoURL} />;
 }
 
-function Greeting() {
+function Greeting({ logoURL }) {
   const { t } = useTranslation();
   const greeting = useGreeting();
   return (
     <div className="my-auto flex flex-col items-center gap-y-3 text-center px-2">
+      {!!logoURL && (
+        <img
+          src={logoURL}
+          alt={t("chat.logo")}
+          className="max-h-12 max-w-[200px] object-contain mb-2"
+        />
+      )}
       <h1 className="m-0 font-clash font-medium text-2xl text-white light:text-slate-900">
         {greeting}
       </h1>
