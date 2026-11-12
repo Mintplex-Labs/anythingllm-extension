@@ -344,7 +344,7 @@ chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
   if (message.action === "connectionUpdated") return ExtensionModel.checkApiKeyValidity();
 
   // Connection strings posted by web pages are never saved directly - they are
-  // held as a pending request until the user approves them in the popup.
+  // held as a pending request until the user approves them in the side panel.
   if (message.action === "newApiKey") {
     if (sender.id !== chrome.runtime.id || !sender.tab) return;
     const connection = parseConnectionString(message.connectionString);

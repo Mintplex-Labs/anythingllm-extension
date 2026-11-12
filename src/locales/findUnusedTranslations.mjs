@@ -24,6 +24,10 @@ const DYNAMIC_KEY_ALLOWLIST = [
   "chat.routedToByRule",
 ];
 
+// Key prefixes read with a template literal, e.g. t(`settings.theme.${value}`).
+// Every key under these is kept.
+const DYNAMIC_PREFIX_ALLOWLIST = ["settings.theme.", "chat.greetings."];
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_SRC = path.resolve(__dirname, "..");
 const shouldDelete = process.argv.includes("--delete");
@@ -139,6 +143,7 @@ const unusedKeys = [...definedKeys]
     (key) =>
       !referencedKeys.has(key) &&
       !allowlist.has(key) &&
+      !DYNAMIC_PREFIX_ALLOWLIST.some((prefix) => key.startsWith(prefix)) &&
       !isPluralFormOfReferencedKey(key)
   )
   .sort();
