@@ -1,7 +1,7 @@
 import semver from "semver";
 
 // Oldest AnythingLLM release that has the side panel chat routes.
-export const MIN_SERVER_VERSION = "1.19.0";
+export const MIN_SERVER_VERSION = "1.20.0";
 
 const DESKTOP_DOWNLOAD_URL = "https://anythingllm.com/download";
 const DOCKER_IMAGES_URL =
