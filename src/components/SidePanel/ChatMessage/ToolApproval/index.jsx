@@ -44,7 +44,7 @@ export default function ToolApproval({ approval, connection }) {
   }
 
   return (
-    <div className="relative bg-zinc-800 light:bg-slate-100 rounded-2xl p-4 pb-2 flex flex-col gap-y-1 overflow-hidden">
+    <div className="relative bg-zinc-800 light:bg-slate-100 rounded-xl p-4 pb-2 flex flex-col gap-y-1 overflow-hidden">
       <div className="flex w-full items-start justify-between gap-x-2 min-w-0">
         <div className="flex items-start gap-2 min-w-0">
           <Hammer size={16} className="shrink-0 mt-0.5" />
@@ -132,13 +132,13 @@ function Decision({
       <div className="flex gap-2">
         <button
           onClick={onApprove}
-          className="border-none transition-all duration-300 bg-white text-black hover:opacity-60 px-4 py-2 rounded-lg text-sm"
+          className="border-none transition-all duration-300 bg-white text-black hover:opacity-60 h-[38px] px-4 rounded-lg text-sm"
         >
           {t("common.approve")}
         </button>
         <button
           onClick={onReject}
-          className="border-none bg-transparent text-white light:text-slate-900 text-sm font-medium w-[70px] h-9 rounded-lg hover:bg-white/5 light:hover:bg-slate-300"
+          className="border-none bg-transparent text-white light:text-slate-900 text-sm font-medium w-[70px] h-[38px] rounded-lg hover:bg-white/5 light:hover:bg-slate-300"
         >
           {t("common.reject")}
         </button>
