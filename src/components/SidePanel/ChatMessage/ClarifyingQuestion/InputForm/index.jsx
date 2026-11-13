@@ -1,7 +1,7 @@
 import React from "react";
 
 const SHARED_CLASS =
-  "w-full border border-solid border-zinc-700 light:border-slate-500 bg-zinc-800 light:bg-white text-white light:text-slate-900 placeholder:text-zinc-500 light:placeholder:text-slate-500 text-sm leading-5 rounded-lg focus:outline-white light:focus:outline-slate-400 outline-none px-[14px] py-[10px]";
+  "w-full border border-solid border-zinc-700 light:border-slate-500 bg-zinc-800 light:bg-white text-white light:text-slate-900 placeholder:text-zinc-500 light:placeholder:text-slate-500 text-sm leading-5 rounded-lg focus:outline-white light:focus:outline-slate-400 outline-none px-[14px]";
 
 /**
  * Free-form text/url/number/date/email/textarea input. The server already
@@ -19,7 +19,7 @@ export default function InputForm({ question, draft, onChange, onSubmit }) {
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={`${SHARED_CLASS} min-h-[128px] resize-y`}
+        className={`${SHARED_CLASS} py-[10px] min-h-[128px] resize-y`}
       />
     );
 
@@ -35,7 +35,7 @@ export default function InputForm({ question, draft, onChange, onSubmit }) {
         e.preventDefault();
         onSubmit?.();
       }}
-      className={SHARED_CLASS}
+      className={`${SHARED_CLASS} h-[38px]`}
     />
   );
 }
