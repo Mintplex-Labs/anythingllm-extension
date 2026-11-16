@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import Screen, { PRIMARY_BUTTON } from "../Screen";
 
 const INPUT =
-  "w-full h-[34px] px-3.5 text-sm rounded-lg outline-none bg-zinc-800 border border-zinc-800 text-zinc-100 placeholder:text-zinc-400 light:bg-white light:border-slate-300 light:text-slate-900 light:placeholder:text-slate-400 focus:border-sky-500 light:focus:border-sky-500";
+  "w-full h-[38px] px-3.5 text-sm rounded-lg outline-none bg-zinc-800 border border-zinc-800 text-zinc-100 placeholder:text-zinc-400 light:bg-white light:border-slate-300 light:text-slate-900 light:placeholder:text-slate-400 focus:border-sky-500 light:focus:border-sky-500";
 
 /**
  * @param {Object} props
@@ -33,9 +33,11 @@ export default function ConnectScreen({ onConnect, notice = null }) {
       description={t("connect.description")}
     >
       {!!notice && (
-        <p className="text-sm text-amber-400 light:text-amber-600">{notice}</p>
+        <p className="text-sm text-amber-400 light:text-amber-600 mb-3">
+          {notice}
+        </p>
       )}
-      <form onSubmit={submit} className="flex flex-col gap-y-2">
+      <form onSubmit={submit} className="flex flex-col gap-y-6">
         <input
           type="text"
           value={connectionString}

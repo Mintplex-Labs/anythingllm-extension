@@ -621,7 +621,7 @@ function HeaderMenu({ onSettings, onDisconnect }) {
         <DotsThreeVertical size={18} weight="bold" />
       </HeaderButton>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-10 min-w-[150px] p-1 rounded-lg bg-zinc-800 light:bg-white border border-zinc-700 light:border-slate-300 shadow-lg">
+        <div className="absolute right-[3px] top-full mt-3.5 z-10 min-w-[150px] p-1 rounded-xl bg-zinc-800 light:bg-white border border-zinc-700 light:border-slate-300 shadow-lg">
           <MenuItem
             icon={GearSix}
             label={t("settings.title")}

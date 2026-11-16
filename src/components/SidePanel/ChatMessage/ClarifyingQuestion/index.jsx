@@ -36,9 +36,6 @@ export default function ClarifyingQuestion({ request, connection }) {
   const isLast = index === total - 1;
   const question = questions[index];
   const draft = drafts[index];
-  const answeredCount = questions.filter(
-    (q, i) => !answerForDraft(q, drafts[i]).skipped
-  ).length;
 
   if (!total) return null;
 
@@ -82,7 +79,7 @@ export default function ClarifyingQuestion({ request, connection }) {
 
   return (
     <div
-      className="relative border border-solid border-zinc-700 light:border-zinc-300 bg-transparent rounded-[20px] p-[18px] flex flex-col gap-[18px] overflow-hidden"
+      className="relative border border-solid border-zinc-700 light:border-zinc-300 bg-transparent rounded-xl p-[18px] flex flex-col gap-[18px] overflow-hidden"
       onPointerEnter={interact}
       onPointerDownCapture={interact}
       onKeyDownCapture={interact}
@@ -104,14 +101,7 @@ export default function ClarifyingQuestion({ request, connection }) {
         <>
           <Header
             question={question.question}
-            index={index}
-            total={total}
-            isSingle={isSingle}
-            onPrev={() => setIndex(Math.max(0, index - 1))}
-            onNext={() => advance()}
             onClose={() => send({ skipped: true })}
-            isFirst={index === 0}
-            isLast={isLast}
           />
           <ActiveForm
             question={question}
@@ -129,8 +119,9 @@ export default function ClarifyingQuestion({ request, connection }) {
             isSingle={isSingle}
             isLast={isLast}
             allowSkip={allowSkip}
-            answeredCount={answeredCount}
+            index={index}
             total={total}
+            onPrev={() => setIndex(Math.max(0, index - 1))}
             onSkipThis={skipThis}
             onNext={() => advance()}
             onSubmitAll={() => submitAll()}
@@ -182,8 +173,14 @@ function ActiveForm({
 function ActiveFooter({ question, draft, allowSkip, ...footerProps }) {
   const isInput = question.kind === "input";
   const isChoice = question.kind === "choice";
-  const show =
+  const showActions =
     isInput || (isChoice && (question.multiSelect || draft?.otherSelected));
-  if (!show) return null;
-  return <Footer allowSkip={allowSkip && isInput} {...footerProps} />;
+  if (!showActions && footerProps.isSingle) return null;
+  return (
+    <Footer
+      allowSkip={allowSkip && isInput}
+      showActions={showActions}
+      {...footerProps}
+    />
+  );
 }

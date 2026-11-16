@@ -187,7 +187,6 @@ const TRANSLATIONS = {
     letAgentDecide: "Let agent decide",
     submit: "Submit",
     submitAll: "Submit all",
-    answeredCount: "{{answered}} of {{total}} answered",
     position: "{{index}} of {{total}}",
     previousQuestion: "Previous question",
     nextQuestion: "Next question",

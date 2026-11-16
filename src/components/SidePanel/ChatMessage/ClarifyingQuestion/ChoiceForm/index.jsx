@@ -50,7 +50,7 @@ export default function ChoiceForm({
   }
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col gap-2 w-full">
       {question.options.map((option, idx) => (
         <button
           key={`${option}-${idx}`}
@@ -74,11 +74,11 @@ export default function ChoiceForm({
         </button>
       ))}
       {showOther && (
-        <div className="flex items-center w-full">
+        <div className="flex items-center gap-2 w-full">
           <button
             aria-pressed={!!draft.otherSelected}
             onClick={toggleOther}
-            className={`${ROW_CLASS} flex-1 min-w-0 ${draft.otherSelected ? ROW_SELECTED : ROW_IDLE}`}
+            className={`${ROW_CLASS} h-[38px] flex-1 min-w-0 ${draft.otherSelected ? ROW_SELECTED : ROW_IDLE}`}
           >
             <span className="flex items-center justify-center shrink-0 w-7 h-7 rounded-lg bg-zinc-700 light:bg-slate-300 text-white light:text-slate-900">
               <PencilSimple size={16} />
@@ -92,7 +92,7 @@ export default function ChoiceForm({
           {allowSkip && (
             <button
               onClick={onSkip}
-              className="border border-solid border-zinc-600 light:border-slate-300 bg-transparent rounded-lg h-7 px-3 flex items-center justify-center text-white light:text-slate-900 text-xs font-medium leading-4 shrink-0 hover:bg-zinc-700/40 light:hover:bg-slate-200/60"
+              className="border-none bg-transparent rounded-lg h-7 px-3 flex items-center justify-center text-white light:text-slate-900 text-xs font-medium leading-4 shrink-0 hover:bg-zinc-700/40 light:hover:bg-slate-200/60"
             >
               {t("common.skip")}
             </button>
@@ -106,7 +106,7 @@ export default function ChoiceForm({
           value={draft.otherText || ""}
           onChange={(e) => onChange({ otherText: e.target.value })}
           placeholder={t("clarify.answerPlaceholder")}
-          className="mt-2 w-full border border-solid border-zinc-700 light:border-slate-500 bg-zinc-800 light:bg-white text-white light:text-slate-900 placeholder:text-zinc-500 light:placeholder:text-slate-500 text-sm rounded-lg focus:outline-white light:focus:outline-slate-400 outline-none p-2"
+          className="w-full h-[38px] border border-solid border-zinc-700 light:border-slate-500 bg-zinc-800 light:bg-white text-white light:text-slate-900 placeholder:text-zinc-500 light:placeholder:text-slate-500 text-sm rounded-lg focus:outline-white light:focus:outline-slate-400 outline-none p-2"
         />
       )}
     </div>

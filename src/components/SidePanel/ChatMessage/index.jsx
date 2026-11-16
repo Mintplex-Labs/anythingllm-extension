@@ -93,7 +93,7 @@ export default function ChatMessage({ message, connection }) {
         />
       )}
       {!!message.error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-400 light:text-red-600 p-2.5 rounded-lg text-sm">
+        <div className="bg-red-500/10 border border-red-500/50 text-red-400 light:text-red-600 p-2.5 rounded-xl text-sm">
           {message.error}
         </div>
       )}
@@ -151,7 +151,7 @@ function UserMessage({ message }) {
           ))}
         </div>
       )}
-      <div className="bg-zinc-800 light:bg-slate-100 rounded-[20px] rounded-br-none px-4 py-3 text-sm whitespace-pre-wrap break-words max-w-[85%]">
+      <div className="bg-zinc-800 light:bg-slate-100 rounded-xl px-4 py-3 text-sm whitespace-pre-wrap break-words max-w-[85%]">
         {message.content}
       </div>
     </div>

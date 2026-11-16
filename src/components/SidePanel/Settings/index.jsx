@@ -96,7 +96,7 @@ function SettingSelect({ id, title, description, value, onChange, options }) {
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="appearance-none w-full h-[34px] pl-3 pr-9 text-sm rounded-lg outline-none cursor-pointer bg-zinc-800 border border-zinc-800 text-zinc-100 light:bg-white light:border-slate-300 light:text-slate-900 focus:border-sky-500 light:focus:border-sky-500"
+          className="appearance-none w-full h-[38px] pl-3 pr-9 text-sm rounded-lg outline-none cursor-pointer bg-zinc-800 border border-zinc-800 text-zinc-100 light:bg-white light:border-slate-300 light:text-slate-900 focus:border-sky-500 light:focus:border-sky-500"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
