@@ -1,86 +1,95 @@
 <p align="center">
-  <img src="src/media/anything-llm.png" alt="AnythingLLM Chrome Extension logo" width="200">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/media/anything-llm.png">
+    <img src="src/media/anything-llm-dark.png" alt="AnythingLLM" width="320">
+  </picture>
+</p>
+
+<h3 align="center">AnythingLLM Browser Companion</h3>
+
+<p align="center">
+  Chat with any page using AnythingLLM from your browser.
 </p>
 
 <p align="center">
-  Seamlessly integrate AnythingLLM into Google Chrome.
-</p>
-
-<p align="center">
+  <a href="https://chromewebstore.google.com/detail/anythingllm-browser-compa/pncmdlebcopjodenlllcomedphdmeogm">Chrome Web Store</a> •
   <a href="#features">Features</a> •
-  <a href="#installation">Installation</a> •
+  <a href="#getting-started">Getting started</a> •
   <a href="#development">Development</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#contributing">Contributing</a> •
-  <a href="#license">License</a>
+  <a href="#contributing">Contributing</a>
 </p>
+
+> [!NOTE]
+> The companion needs a running [AnythingLLM](https://anythingllm.com/download) instance, version **1.20.0 or newer**. Desktop, Docker, and Cloud instances all work.
 
 ## Features
 
-- 🔗 Connect to your AnythingLLM instance with a simple connection string or automatic browser extension registration
-- 📑 Save selected text to AnythingLLM directly from any webpage
-- 📄 Upload entire web pages to AnythingLLM for processing
-- 🗂️ Embed content into specific workspaces
-- 🔄 Automatic logo synchronization with your AnythingLLM instance
+- **Chat with any page.** The tab you're on is one click away as context.
+- **Bring in more tabs.** Type `@` to add other currently open tabs to the conversation.
+- **Right-click actions.** Highlight text and choose Ask, Summarize, Explain, Rewrite, or Fix spelling and grammar. Right-click a page to chat with it, or an image to add it to the chat.
+- **Attachments and voice.** Drag, drop, or paste files and images, or dictate with the microphone.
+- **Agents in the panel.** Approve tool calls, answer clarifying questions, and see charts, files, and scheduled jobs.
+- **Synced threads.** Every chat is saved as a thread in your workspace, so you can continue it in AnythingLLM.
+- **Save the web.** Send a selection or a whole page to AnythingLLM, or embed it straight into a workspace.
+- **Your instance, your data.** The chats, pages, and files you share go only to the AnythingLLM instance you connect.
 
-## Installation
+## Getting started
 
-<a href="https://chromewebstore.google.com/detail/anythingllm-browser-compa/pncmdlebcopjodenlllcomedphdmeogm">
-  <img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khYWPJUsQceQkhXSlv1/iNEddTyWiMfLSwFD6qGq.png" alt="Chrome Extension" width="200">
-</a>
+1. Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/anythingllm-browser-compa/pncmdlebcopjodenlllcomedphdmeogm), or [build it yourself](#development).
+2. Click the toolbar icon, or press `Alt+Shift+L`, to open the side panel.
+3. In AnythingLLM, go to **Settings > Tools > Browser Extension** and click **Connect**, then approve the request in the panel. You can also paste the connection string into the panel instead.
+4. Pick a workspace and start chatting.
 
-_or_
-
-1. Clone this repository or download the latest release.
-2. Open Chrome and navigate to `chrome://extensions`.
-3. Enable "Developer mode" in the top right corner.
-4. Click "Load unpacked" and select the `dist` folder from this project.
+Disconnecting, settings (language and light/dark/system theme), and the threads list are in the panel's header.
 
 ## Development
 
-To set up the project for development:
+You'll need Node.js 18+ and Yarn.
 
-1. Install dependencies:
+```sh
+yarn install
+yarn dev     # rebuilds dist/ on every change
+yarn build   # one-off production build
+yarn build:prod  # build, then zip dist/ into release/ for the Chrome Web Store
+```
 
-   ```
-   yarn install
-   ```
+Then load it into Chrome:
 
-2. Run the development server:
+1. Open `chrome://extensions` and turn on **Developer mode**.
+2. Click **Load unpacked** and select the `dist` folder.
+3. After a rebuild, click the reload icon on the extension's card.
 
-   ```
-   yarn dev
-   ```
+### Project layout
 
-3. To build the extension:
-   ```
-   yarn build
-   ```
+| Path | What's in it |
+| --- | --- |
+| `public/manifest.json` | Extension manifest (name, version, permissions) |
+| `public/background.js` | Service worker: context menus, connection handling, side panel |
+| `public/contentScript.js` | Runs on pages to read content and relay connection requests |
+| `src/components/SidePanel/` | The side panel React app |
+| `src/locales/` | UI strings and translation scripts |
 
-The built extension will be in the `dist` folder.
+### Translations
 
-## Usage
-
-1. Click the AnythingLLM extension icon in your Chrome toolbar (or press `Alt+Shift+L`) to open the side panel.
-2. Paste the connection string from Settings > Tools > Browser Extension in AnythingLLM, or click Connect there and approve the request in the panel.
-3. Right-click on selected text or anywhere on a webpage to see AnythingLLM options.
-4. Choose to save selected text or the entire page to AnythingLLM.
+English strings live in `src/locales/en/`. Run `yarn translations:verify` after changing them. `yarn translations:normalize`, `yarn translations:unused`, and `yarn translations:prune` keep the files tidy.
 
 ## Contributing
 
-Contributions are welcome! Feel free to submit a PR.
+Contributions are welcome.
 
-## Acknowledgements
+1. Fork the repo and create a branch from `main`.
+2. Make your change, then run `yarn lint` and `yarn build`.
+3. Load the built extension and check your change against a real AnythingLLM instance.
+4. Open a pull request that describes what changed and includes screenshots for UI changes.
 
-- This extension is designed to work with [AnythingLLM](https://github.com/Mintplex-Labs/anything-llm).
+Found a bug or have an idea? [Open an issue](https://github.com/Mintplex-Labs/anythingllm-extension/issues).
 
----
+## Related
 
-Copyright © 2024 [Mintplex Labs](https://github.com/Mintplex-Labs). <br />
-This project is [MIT](../LICENSE) licensed.
+- [AnythingLLM](https://github.com/Mintplex-Labs/anything-llm): the all-in-one AI app this extension connects to
+- [AnythingLLM Desktop](https://anythingllm.com/download)
+- [Documentation](https://docs.anythingllm.com)
 
-## Side panel chat
+## License
 
-Click the toolbar icon or press `Alt+Shift+L` to open the panel. Connecting, disconnecting (three-dot menu), and connection problems are all handled in the panel. It chats with the selected workspace, and the current tab is offered as a one-click chip to add as context. Each chat is saved as a thread in that workspace, so it can be picked up later inside AnythingLLM. Type `@` to attach other open tabs, drop or paste files to attach them, and use the microphone button to dictate. Right-click highlighted text for "Ask AnythingLLM about this" or a quick action (Summarize, Explain, Rewrite, Fix spelling & grammar). Right-click a page for "Chat with page", or an image for "Add image to chat".
-
-Chrome cannot show the microphone prompt inside a side panel, so the first use of the microphone opens a small tab that asks for permission once.
+[MIT](LICENSE) © [Mintplex Labs](https://github.com/Mintplex-Labs)

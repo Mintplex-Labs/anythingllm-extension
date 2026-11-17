@@ -1,11 +1,13 @@
 {
   "name": "anything-llm-extension",
-  "version": "1.1.0",
+  "version": "1.20.0",
+  "description": "Chat with any page using your own AnythingLLM. Summarize and rewrite text, run agents, and save the web to your workspaces.",
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch src --watch public -e js,jsx,css,html --exec \"yarn dev:build\"",
     "dev:build": "vite build",
     "build": "vite build",
+    "build:prod": "vite build && node scripts/package.mjs",
     "lint": "yarn prettier --ignore-path ../.prettierignore --write ./src",
     "preview": "vite preview",
     "translations:verify": "cd src/locales && node verifyTranslations.mjs",
