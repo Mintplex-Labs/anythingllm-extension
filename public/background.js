@@ -14,7 +14,7 @@ const QUICK_ACTIONS = {
       "Rewrite the selected text to be clearer and more concise. Reply with only the rewritten text.",
   },
   fixGrammar: {
-    title: "Fix spelling & grammar",
+    title: "Fix spelling and grammar",
     prompt:
       "Fix any spelling and grammar mistakes in the selected text without changing its meaning. Reply with only the corrected text.",
   },

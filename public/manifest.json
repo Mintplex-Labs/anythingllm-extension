@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AnythingLLM Browser Companion",
-  "version": "1.1.0",
-  "description": "Chat with your AnythingLLM workspaces from a side panel, using the page you're on as context, and save web content to them.",
+  "version": "1.20.0",
+  "description": "Chat with any page using your own AnythingLLM. Summarize and rewrite text, run agents, and save the web to your workspaces.",
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
